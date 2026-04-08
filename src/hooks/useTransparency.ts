@@ -1,17 +1,17 @@
 import { useStore } from '../store/useStore';
 
 export function useTransparencyStyle() {
-  const transparency = useStore((state) => state.transparency);
+  const componentOpacity = useStore((state) => state.componentOpacity);
   
   // Create styles object that can be applied to elements
   return {
     style: {
-      backgroundColor: `rgba(255, 255, 255, ${transparency / 100})`,
+      backgroundColor: `rgba(255, 255, 255, ${componentOpacity / 100})`,
     },
     darkStyle: {
-      backgroundColor: `rgba(9, 9, 11, ${transparency / 100})`, // zinc-950 equivalent
+      backgroundColor: `rgba(9, 9, 11, ${componentOpacity / 100})`, // zinc-950 equivalent
     },
     // Useful for pseudo-elements or specific cases where we just need the opacity value
-    opacity: transparency / 100
+    opacity: componentOpacity / 100
   };
 }

@@ -7,6 +7,7 @@ import NewsWidget from '../components/NewsWidget';
 import { format } from 'date-fns';
 // @ts-ignore
 import * as ColorThiefPkg from 'colorthief';
+// @ts-ignore
 const ColorThief = ColorThiefPkg.default || ColorThiefPkg;
 
 export default function Home() {

@@ -4,6 +4,7 @@ import { ImagePlus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 // @ts-ignore
 import * as ColorThiefPkg from 'colorthief';
+// @ts-ignore
 const ColorThief = ColorThiefPkg.default || ColorThiefPkg;
 
 export default function Gallery() {

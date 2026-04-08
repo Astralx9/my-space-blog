@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Post } from '../../store/useStore';
+import { Post } from '../store/useStore';
 import { Calendar, Book, Clock } from 'lucide-react';
 
 interface PostCardProps {
