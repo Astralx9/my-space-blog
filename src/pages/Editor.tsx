@@ -1,33 +1,43 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore, Category } from '../store/useStore';
-import { Image as ImageIcon, Send, ArrowLeft, Loader2 } from 'lucide-react';
+import { Image as ImageIcon, Send, ArrowLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { compressImageInWorker } from '../lib/imageWorker';
 
 export default function Editor() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<Category>('diary');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<{ status: 'idle' | 'uploading' | 'success' | 'error', message?: string }>({ status: 'idle' });
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const addPost = useStore((state) => state.addPost);
   const navigate = useNavigate();
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
+    try {
+      setUploadStatus({ status: 'uploading', message: '正在压缩并插入图片...' });
+      
+      // Use the Web Worker to compress the image in the background without freezing the UI
+      const base64 = await compressImageInWorker(file);
       const imageMarkdown = `\n![${file.name}](${base64})\n`;
       setContent((prev) => prev + imageMarkdown);
-    };
-    reader.readAsDataURL(file);
-    
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      
+      setUploadStatus({ status: 'success', message: '图片插入成功' });
+      setTimeout(() => setUploadStatus({ status: 'idle' }), 3000);
+    } catch (error) {
+      console.error('Image compression failed:', error);
+      setUploadStatus({ status: 'error', message: '图片处理失败，请重试' });
+      setTimeout(() => setUploadStatus({ status: 'idle' }), 3000);
+    } finally {
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -39,13 +49,18 @@ export default function Editor() {
     // Simulate slight delay for UX
     await new Promise((resolve) => setTimeout(resolve, 500));
     
-    addPost({
-      title,
-      content,
-      category,
-    });
-    
-    navigate('/');
+    try {
+      addPost({
+        title,
+        content,
+        category,
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to save post:', error);
+      alert('发布失败：您的浏览器存储空间已满（限制为 5MB）。请尝试删除其他日记/相册，或减少本文中的图片数量后再试。');
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -71,7 +86,7 @@ export default function Editor() {
             required
           />
 
-          <div className="flex items-center gap-4 py-4 border-y border-zinc-100 dark:border-zinc-800">
+          <div className="flex flex-wrap items-center gap-4 py-4 border-y border-zinc-100 dark:border-zinc-800">
             <div className="flex gap-2">
               <button
                 type="button"
@@ -97,16 +112,33 @@ export default function Editor() {
               </button>
             </div>
 
-            <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800" />
+            <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800 hidden sm:block" />
 
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-            >
-              <ImageIcon className="w-4 h-4" />
-              插入图片
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadStatus.status === 'uploading'}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ImageIcon className="w-4 h-4" />
+                插入图片
+              </button>
+              
+              {uploadStatus.status !== 'idle' && (
+                <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md transition-all duration-300 ${
+                  uploadStatus.status === 'uploading' ? 'text-blue-600 bg-blue-50 dark:bg-blue-500/10 dark:text-blue-400' :
+                  uploadStatus.status === 'success' ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400' :
+                  'text-red-600 bg-red-50 dark:bg-red-500/10 dark:text-red-400'
+                }`}>
+                  {uploadStatus.status === 'uploading' && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {uploadStatus.status === 'success' && <CheckCircle2 className="w-3 h-3" />}
+                  {uploadStatus.status === 'error' && <AlertCircle className="w-3 h-3" />}
+                  {uploadStatus.message}
+                </div>
+              )}
+            </div>
+            
             <input
               type="file"
               ref={fileInputRef}

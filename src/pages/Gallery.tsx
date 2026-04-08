@@ -1,7 +1,8 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
-import { ImagePlus, Trash2 } from 'lucide-react';
+import { ImagePlus, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { compressImageInWorker } from '../lib/imageWorker';
 // @ts-ignore
 import * as ColorThiefPkg from 'colorthief';
 // @ts-ignore
@@ -11,43 +12,60 @@ export default function Gallery() {
   const photos = useStore((state) => state.photos);
   const addPhoto = useStore((state) => state.addPhoto);
   const deletePhoto = useStore((state) => state.deletePhoto);
+  const [uploadStatus, setUploadStatus] = useState<{ status: 'idle' | 'uploading' | 'success' | 'error', message?: string }>({ status: 'idle' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64 = event.target?.result as string;
+    setUploadStatus({ status: 'uploading', message: `正在处理 ${files.length} 张图片...` });
+
+    try {
+      const processPromises = Array.from(files).map(async (file) => {
+        // Compress in background
+        const base64 = await compressImageInWorker(file);
         
-        // Extract colors immediately on upload
-        const img = new Image();
-        img.onload = () => {
-          try {
-            const colorThief = new ColorThief();
-            const palette = colorThief.getPalette(img, 5);
-            if (palette && palette.length >= 2) {
-              const primary = `rgb(${palette[0][0]}, ${palette[0][1]}, ${palette[0][2]})`;
-              const secondary = `rgb(${palette[1][0]}, ${palette[1][1]}, ${palette[1][2]})`;
-              addPhoto({ url: base64, extractedColors: { primary, secondary } });
-            } else {
+        // Extract colors
+        return new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const colorThief = new ColorThief();
+              const palette = colorThief.getPalette(img, 5);
+              if (palette && palette.length >= 2) {
+                const primary = `rgb(${palette[0][0]}, ${palette[0][1]}, ${palette[0][2]})`;
+                const secondary = `rgb(${palette[1][0]}, ${palette[1][1]}, ${palette[1][2]})`;
+                addPhoto({ url: base64, extractedColors: { primary, secondary } });
+              } else {
+                addPhoto({ url: base64 });
+              }
+            } catch (err) {
+              console.warn('Failed to extract color on upload', err);
               addPhoto({ url: base64 });
             }
-          } catch (e) {
-            console.warn('Failed to extract color on upload', e);
+            resolve();
+          };
+          img.onerror = () => {
             addPhoto({ url: base64 });
-          }
-        };
-        img.onerror = () => addPhoto({ url: base64 });
-        img.src = base64;
-      };
-      reader.readAsDataURL(file);
-    });
+            resolve();
+          };
+          img.src = base64;
+        });
+      });
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      await Promise.all(processPromises);
+      
+      setUploadStatus({ status: 'success', message: '图片上传成功' });
+      setTimeout(() => setUploadStatus({ status: 'idle' }), 3000);
+    } catch (error) {
+      console.error('Image processing failed:', error);
+      setUploadStatus({ status: 'error', message: '图片处理失败，请重试' });
+      setTimeout(() => setUploadStatus({ status: 'idle' }), 3000);
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -59,13 +77,29 @@ export default function Gallery() {
           <p className="text-zinc-500 dark:text-zinc-400">总计 {photos.length} 张照片。这些照片将会随机显示在主页背景上。</p>
         </div>
 
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors shadow-sm"
-        >
-          <ImagePlus className="w-5 h-5" />
-          上传作品
-        </button>
+        <div className="flex items-center gap-3">
+          {uploadStatus.status !== 'idle' && (
+            <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-300 ${
+              uploadStatus.status === 'uploading' ? 'text-blue-600 bg-blue-50 dark:bg-blue-500/10 dark:text-blue-400' :
+              uploadStatus.status === 'success' ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400' :
+              'text-red-600 bg-red-50 dark:bg-red-500/10 dark:text-red-400'
+            }`}>
+              {uploadStatus.status === 'uploading' && <Loader2 className="w-4 h-4 animate-spin" />}
+              {uploadStatus.status === 'success' && <CheckCircle2 className="w-4 h-4" />}
+              {uploadStatus.status === 'error' && <AlertCircle className="w-4 h-4" />}
+              {uploadStatus.message}
+            </div>
+          )}
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadStatus.status === 'uploading'}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ImagePlus className="w-5 h-5" />
+            上传作品
+          </button>
+        </div>
         <input
           type="file"
           ref={fileInputRef}
