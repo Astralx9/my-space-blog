@@ -9,6 +9,7 @@ export default function WeightTracker() {
   const addWeight = useStore((state) => state.addWeight);
   const deleteWeight = useStore((state) => state.deleteWeight);
   const extractedColors = useStore((state) => state.extractedColors);
+  const checkPassword = useStore((state) => state.checkPassword);
   
   const [newWeight, setNewWeight] = useState('');
 
@@ -21,10 +22,18 @@ export default function WeightTracker() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!checkPassword()) return;
     const w = parseFloat(newWeight);
     if (!isNaN(w) && w > 0 && w < 300) {
       addWeight(w);
       setNewWeight('');
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (!checkPassword()) return;
+    if (confirm('确定要删除这条记录吗？')) {
+      deleteWeight(id);
     }
   };
 

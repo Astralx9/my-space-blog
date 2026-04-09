@@ -4,25 +4,24 @@ import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../hooks/useTheme';
 
-const navItems = [
-  { path: '/', label: '首页', icon: Home },
-  { path: '/posts', label: '全部记录', icon: BookOpen },
-  { path: '/todo', label: '待办与流程', icon: CheckSquare },
-  { path: '/gallery', label: '摄影作品', icon: ImageIcon },
-  { path: '/editor', label: '写点什么', icon: PenTool },
-];
-
 export default function Sidebar() {
-  const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  
+  const location = useLocation();
   const isCollapsed = useStore((state) => state.sidebarCollapsed);
-  const toggleSidebar = () => useStore.getState().setSidebarCollapsed(!isCollapsed);
+  const setSidebarCollapsed = useStore((state) => state.setSidebarCollapsed);
   const componentOpacity = useStore((state) => state.componentOpacity);
   const setComponentOpacity = useStore((state) => state.setComponentOpacity);
   const extractedColors = useStore((state) => state.extractedColors);
   
   const { isDark, toggleTheme } = useTheme();
+
+  const navItems = [
+    { path: '/', label: '首页', icon: Home },
+    { path: '/posts', label: '全部记录', icon: BookOpen },
+    { path: '/todo', label: '待办与流程', icon: CheckSquare },
+    { path: '/gallery', label: '摄影作品', icon: ImageIcon },
+    { path: '/editor', label: '写点什么', icon: PenTool },
+  ];
 
   return (
     <>
@@ -107,27 +106,30 @@ export default function Sidebar() {
                 max="100" 
                 value={componentOpacity} 
                 onChange={(e) => setComponentOpacity(Number(e.target.value))}
-                className="w-full accent-blue-500 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                style={{ accentColor: extractedColors?.primary || '#3b82f6' }}
               />
             </div>
           )}
-          
-          <div className={`flex items-center ${isCollapsed ? 'flex-col justify-center' : 'justify-between px-2'} gap-4`}>
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-              title={isDark ? "切换为亮色" : "切换为暗色"}
-            >
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
 
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors hidden md:block"
-              title={isCollapsed ? "展开侧边栏" : "收起侧边栏"}
-            >
-              {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-            </button>
+          <div className="mt-auto space-y-2 pt-4">
+            <div className={`flex items-center ${isCollapsed ? 'flex-col justify-center' : 'justify-between px-2'} gap-4`}>
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                title={isDark ? "切换为亮色" : "切换为暗色"}
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+
+              <button
+                onClick={() => setSidebarCollapsed(!isCollapsed)}
+                className="p-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors hidden md:block"
+                title={isCollapsed ? "展开侧边栏" : "收起侧边栏"}
+              >
+                {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </div>
       </aside>

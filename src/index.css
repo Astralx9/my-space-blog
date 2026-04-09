@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --theme-primary: 59 130 246; /* blue-500 */
+    --theme-secondary: 16 185 129; /* emerald-500 */
+  }
+  
   body {
     @apply bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100;
   }

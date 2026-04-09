@@ -12,10 +12,15 @@ export default function Gallery() {
   const photos = useStore((state) => state.photos);
   const addPhoto = useStore((state) => state.addPhoto);
   const deletePhoto = useStore((state) => state.deletePhoto);
+  const checkPassword = useStore((state) => state.checkPassword);
   const [uploadStatus, setUploadStatus] = useState<{ status: 'idle' | 'uploading' | 'success' | 'error', message?: string }>({ status: 'idle' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!checkPassword()) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -50,7 +55,14 @@ export default function Gallery() {
             addPhoto({ url: base64 });
             resolve();
           };
-          img.src = base64;
+          // Use the raw file blob to bypass data URI issues in ColorThief during upload
+          const objectUrl = URL.createObjectURL(file);
+          img.src = objectUrl;
+          
+          // Cleanup
+          img.onloadend = () => {
+            URL.revokeObjectURL(objectUrl);
+          };
         });
       });
 
@@ -127,6 +139,7 @@ export default function Gallery() {
                 <div className="flex justify-end">
                   <button
                     onClick={() => {
+                      if (!checkPassword()) return;
                       if(window.confirm('确定要删除这张照片吗？')) {
                         deletePhoto(photo.id);
                       }

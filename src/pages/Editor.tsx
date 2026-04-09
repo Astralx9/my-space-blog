@@ -13,9 +13,14 @@ export default function Editor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const addPost = useStore((state) => state.addPost);
+  const checkPassword = useStore((state) => state.checkPassword);
   const navigate = useNavigate();
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!checkPassword()) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -44,6 +49,8 @@ export default function Editor() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
+    
+    if (!checkPassword()) return;
 
     setIsSubmitting(true);
     // Simulate slight delay for UX

@@ -33,7 +33,7 @@ export default function Home() {
       // Fallback extraction for old photos without pre-extracted colors
       const handleColorExtraction = async () => {
         try {
-          // If it's a data URL (local upload), we can extract directly
+          // If it's a base64/data URL (local upload), we can extract directly
           if (random.url.startsWith('data:')) {
             extractColorsFromUrl(random.url);
             return;
@@ -108,7 +108,36 @@ export default function Home() {
           setExtractedColors(null);
         };
         
-        img.src = urlToExtract;
+        // Use object URL for base64 strings as well to bypass potential size limits or CSP blocks in some browsers
+        if (urlToExtract.startsWith('data:')) {
+          fetch(urlToExtract)
+            .then(res => res.blob())
+            .then(blob => {
+              const objectUrl = URL.createObjectURL(blob);
+              img.onload = () => {
+                try {
+                  const colorThief = new ColorThief();
+                  const palette = colorThief.getPalette(img, 5);
+                  if (palette && palette.length >= 2) {
+                    const primary = `rgb(${palette[0][0]}, ${palette[0][1]}, ${palette[0][2]})`;
+                    const secondary = `rgb(${palette[1][0]}, ${palette[1][1]}, ${palette[1][2]})`;
+                    setExtractedColors({ primary, secondary });
+                  } else {
+                    setExtractedColors(null);
+                  }
+                } catch (e) {
+                  setExtractedColors(null);
+                }
+                URL.revokeObjectURL(objectUrl);
+              };
+              img.src = objectUrl;
+            })
+            .catch(() => {
+              img.src = urlToExtract;
+            });
+        } else {
+          img.src = urlToExtract;
+        }
       };
 
       handleColorExtraction();
@@ -165,10 +194,10 @@ export default function Home() {
                   ? `linear-gradient(to right, ${extractedColors.primary}, ${extractedColors.secondary})`
                   : 'linear-gradient(to right, #2563eb, #10b981)'
               }}
-            >My Space</span>
+            >Astral's Space</span>
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-            记录生活点滴，沉淀学习心得。这里是我构建个人知识库和数字花园的角落。
+            本来无一物，何处惹尘埃。
           </p>
         </section>
 

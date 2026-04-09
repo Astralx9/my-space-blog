@@ -1,11 +1,31 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useStore } from '../../store/useStore';
-import React from 'react';
+import React, { useEffect } from 'react';
 
 export default function Layout() {
   const componentOpacity = useStore((state) => state.componentOpacity);
   const isCollapsed = useStore((state) => state.sidebarCollapsed);
+  const extractedColors = useStore((state) => state.extractedColors);
+
+  useEffect(() => {
+    if (extractedColors) {
+      // Parse "rgb(R, G, B)" to "R G B" format for Tailwind opacity support
+      const parseRgb = (rgbStr: string) => {
+        const match = rgbStr.match(/\d+/g);
+        return match ? match.join(' ') : '';
+      };
+      
+      const primaryRgb = parseRgb(extractedColors.primary);
+      const secondaryRgb = parseRgb(extractedColors.secondary);
+      
+      if (primaryRgb) document.documentElement.style.setProperty('--theme-primary', primaryRgb);
+      if (secondaryRgb) document.documentElement.style.setProperty('--theme-secondary', secondaryRgb);
+    } else {
+      document.documentElement.style.removeProperty('--theme-primary');
+      document.documentElement.style.removeProperty('--theme-secondary');
+    }
+  }, [extractedColors]);
 
   return (
     <div 

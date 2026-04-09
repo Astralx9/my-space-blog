@@ -11,7 +11,7 @@ export const compressImageInWorker = (file: File): Promise<string> => {
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          const MAX_WIDTH = 800; // Aggressive compression for localStorage
+          const MAX_WIDTH = 1920; // Improved quality
           
           if (width > MAX_WIDTH) {
             height = Math.round((height * MAX_WIDTH) / width);
@@ -23,7 +23,7 @@ export const compressImageInWorker = (file: File): Promise<string> => {
           const ctx = canvas.getContext('2d');
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.6));
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
           } else {
             // Absolute fallback if canvas 2D is unavailable
             resolve(e.target?.result as string);
@@ -47,7 +47,7 @@ export const compressImageInWorker = (file: File): Promise<string> => {
             const bitmap = await createImageBitmap(file);
             let width = bitmap.width;
             let height = bitmap.height;
-            const MAX_WIDTH = 800; // Aggressive compression for localStorage
+            const MAX_WIDTH = 1920; // Improved quality
             
             if (width > MAX_WIDTH) {
               height = Math.round((height * MAX_WIDTH) / width);
@@ -58,7 +58,7 @@ export const compressImageInWorker = (file: File): Promise<string> => {
             const ctx = canvas.getContext('2d');
             if (ctx) {
               ctx.drawImage(bitmap, 0, 0, width, height);
-              const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.6 });
+              const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
               
               const reader = new FileReader();
               reader.onloadend = () => self.postMessage({ success: true, base64: reader.result });

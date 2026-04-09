@@ -7,7 +7,7 @@ import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
 export default defineConfig({
   server: {
     hmr: {
-      port: 443,
+      clientPort: 443,
     },
     host: '0.0.0.0',
     allowedHosts: true,
