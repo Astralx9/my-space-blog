@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
 import Posts from './pages/Posts';
@@ -20,6 +21,7 @@ function App() {
           <Route path="editor" element={<Editor />} />
         </Route>
       </Routes>
+      <Analytics />
     </BrowserRouter>
   );
 }
