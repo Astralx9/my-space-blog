@@ -3,10 +3,7 @@ import { useStore } from '../store/useStore';
 import { ImagePlus, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { compressImageInWorker } from '../lib/imageWorker';
-// @ts-ignore
-import * as ColorThiefPkg from 'colorthief';
-// @ts-ignore
-const ColorThief = ColorThiefPkg.default || ColorThiefPkg;
+import { getPaletteSync } from 'colorthief';
 
 export default function Gallery() {
   const photos = useStore((state) => state.photos);
@@ -15,6 +12,35 @@ export default function Gallery() {
   const checkPassword = useStore((state) => state.checkPassword);
   const [uploadStatus, setUploadStatus] = useState<{ status: 'idle' | 'uploading' | 'success' | 'error', message?: string }>({ status: 'idle' });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getImageColors = (file: File) => new Promise<{ primary: string; secondary: string } | null>((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    const finish = (colors: { primary: string; secondary: string } | null) => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(colors);
+    };
+
+    img.onload = () => {
+      try {
+        const palette = getPaletteSync(img, { colorCount: 5 });
+        if (palette?.length >= 2) {
+          const primary = palette[0].rgb();
+          const secondary = palette[1].rgb();
+          finish({
+            primary: `rgb(${primary.r}, ${primary.g}, ${primary.b})`,
+            secondary: `rgb(${secondary.r}, ${secondary.g}, ${secondary.b})`,
+          });
+          return;
+        }
+      } catch (error) {
+        console.warn('Failed to extract color on upload', error);
+      }
+      finish(null);
+    };
+    img.onerror = () => finish(null);
+    img.src = objectUrl;
+  });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!checkPassword()) {
@@ -27,48 +53,34 @@ export default function Gallery() {
     setUploadStatus({ status: 'uploading', message: `正在处理 ${files.length} 张图片...` });
 
     try {
-      const processPromises = Array.from(files).map(async (file) => {
-        // Compress in background
-        const base64 = await compressImageInWorker(file);
-        
-        // Extract colors
-        return new Promise<void>((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            try {
-              const colorThief = new ColorThief();
-              const palette = colorThief.getPalette(img, 5);
-              if (palette && palette.length >= 2) {
-                const primary = `rgb(${palette[0][0]}, ${palette[0][1]}, ${palette[0][2]})`;
-                const secondary = `rgb(${palette[1][0]}, ${palette[1][1]}, ${palette[1][2]})`;
-                addPhoto({ url: base64, extractedColors: { primary, secondary } });
-              } else {
-                addPhoto({ url: base64 });
-              }
-            } catch (err) {
-              console.warn('Failed to extract color on upload', err);
-              addPhoto({ url: base64 });
-            }
-            resolve();
-          };
-          img.onerror = () => {
-            addPhoto({ url: base64 });
-            resolve();
-          };
-          // Use the raw file blob to bypass data URI issues in ColorThief during upload
-          const objectUrl = URL.createObjectURL(file);
-          img.src = objectUrl;
-          
-          // Cleanup
-          img.onloadend = () => {
-            URL.revokeObjectURL(objectUrl);
-          };
-        });
-      });
+      let uploaded = 0;
+      const failed: string[] = [];
 
-      await Promise.all(processPromises);
-      
-      setUploadStatus({ status: 'success', message: '图片上传成功' });
+      // Process sequentially to avoid several large base64 requests competing for memory/network.
+      for (const file of Array.from(files)) {
+        setUploadStatus({ status: 'uploading', message: `正在上传 ${uploaded + failed.length + 1}/${files.length}：${file.name}` });
+        try {
+          const [base64, extractedColors] = await Promise.all([
+            compressImageInWorker(file),
+            getImageColors(file),
+          ]);
+          // Await the database write: only report success after Supabase confirms it.
+          await addPhoto({ url: base64, extractedColors });
+          uploaded += 1;
+        } catch (error) {
+          console.error(`Failed to upload ${file.name}:`, error);
+          failed.push(file.name);
+        }
+      }
+
+      if (failed.length > 0) {
+        setUploadStatus({
+          status: 'error',
+          message: uploaded > 0 ? `已上传 ${uploaded} 张，${failed.length} 张失败，请重试` : '上传失败，请检查网络后重试',
+        });
+      } else {
+        setUploadStatus({ status: 'success', message: `成功上传 ${uploaded} 张图片` });
+      }
       setTimeout(() => setUploadStatus({ status: 'idle' }), 3000);
     } catch (error) {
       console.error('Image processing failed:', error);
