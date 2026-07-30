@@ -1,97 +1,140 @@
-import { useState, useMemo } from 'react';
-import { useStore } from '../store/useStore';
+import { useMemo, useState } from 'react';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { format } from 'date-fns';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Scale, Plus } from 'lucide-react';
+import { Loader2, Minus, Plus, Scale, TrendingDown, TrendingUp } from 'lucide-react';
+import { useStore } from '../store/useStore';
 
 export default function WeightTracker() {
   const weights = useStore((state) => state.weights);
   const addWeight = useStore((state) => state.addWeight);
   const extractedColors = useStore((state) => state.extractedColors);
-  
   const [newWeight, setNewWeight] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
-  const chartData = useMemo(() => {
-    return weights.map(w => ({
-      ...w,
-      displayDate: format(w.date, 'MM/dd')
-    }));
-  }, [weights]);
+  const chartData = useMemo(() => weights.map((record) => ({
+    ...record,
+    displayDate: format(new Date(record.date), 'M/d'),
+  })), [weights]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const w = parseFloat(newWeight);
-    if (!isNaN(w) && w > 0 && w < 300) {
-      addWeight(w);
+  const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : null;
+  const firstWeight = weights.length > 0 ? weights[0].weight : null;
+  const change = latestWeight !== null && firstWeight !== null && weights.length > 1 ? latestWeight - firstWeight : null;
+  const themeColor = extractedColors?.primary || '#0071e3';
+
+  const chartDomain = useMemo(() => {
+    const values = chartData.map((record) => record.weight);
+    if (values.length < 2) return [0, 1] as [number, number];
+    const minimum = Math.min(...values);
+    const maximum = Math.max(...values);
+    const padding = Math.max(0.35, (maximum - minimum) * 0.6);
+    return [Number((minimum - padding).toFixed(1)), Number((maximum + padding).toFixed(1))] as [number, number];
+  }, [chartData]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const value = Number.parseFloat(newWeight);
+    if (!Number.isFinite(value) || value <= 0 || value >= 300) {
+      setFormError('璇疯緭鍏?0 鍒?300 涔嬮棿鐨勪綋閲嶆暟鍊笺€?);
+      return;
+    }
+
+    setFormError('');
+    setIsSaving(true);
+    try {
+      await addWeight(value);
       setNewWeight('');
+    } catch (error) {
+      console.error('Failed to save weight:', error);
+      setFormError('璁板綍鏈繚瀛樻垚鍔燂紝璇锋鏌ョ綉缁滃悗閲嶈瘯銆?);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : null;
-
   return (
-    <div className="apple-surface apple-surface-interactive flex min-h-[38rem] flex-col rounded-[2.5rem] p-7 sm:p-10">
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <h2 className="flex items-center gap-3 text-2xl font-semibold tracking-[-0.035em]">
-          <Scale className="w-6 h-6" style={{ color: extractedColors?.primary || '#3b82f6' }} />
-          体重记录器
-        </h2>
-        {latestWeight && (
-          <div className="text-right text-xs font-medium text-zinc-500">
-            最新<br /><span className="text-2xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-zinc-100">{latestWeight}</span> kg
+    <div className="apple-surface apple-surface-interactive flex min-h-[38rem] flex-col rounded-[2.5rem] p-6 sm:p-10">
+      <div className="flex flex-wrap items-start justify-between gap-5">
+        <div>
+          <p className="eyebrow mb-3">Body metrics</p>
+          <h2 className="flex items-center gap-3 text-2xl font-semibold tracking-[-0.035em]">
+            <Scale className="h-6 w-6" style={{ color: themeColor }} />
+            浣撻噸璁板綍鍣?          </h2>
+        </div>
+        {latestWeight !== null && (
+          <div className="rounded-2xl border border-black/[0.06] bg-white/55 px-4 py-3 text-right shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.05]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">鏈€鏂拌褰?/p>
+            <p className="mt-1 text-3xl font-semibold tracking-[-0.055em] text-zinc-950 dark:text-white">{latestWeight.toFixed(1)}<span className="ml-1 text-sm font-medium text-zinc-500">kg</span></p>
           </div>
         )}
       </div>
 
-      <div className="mb-8 h-64 w-full flex-1">
-        {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#a1a1aa" opacity={0.2} />
-              <XAxis dataKey="displayDate" stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis domain={['dataMin - 2', 'dataMax + 2']} stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-white)' }}
-                formatter={(value: number) => [`${value} kg`, '体重']}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="weight" 
-                stroke={extractedColors?.primary || '#3b82f6'}
-                strokeWidth={3}
-                dot={{ r: 4, fill: extractedColors?.primary || '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 6, strokeWidth: 0 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="h-full flex items-center justify-center text-zinc-400 text-sm border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl">
-            暂无体重记录
+      <section className="relative mt-8 flex-1 overflow-hidden rounded-[2rem] border border-black/[0.06] bg-gradient-to-br from-white/85 via-white/60 to-[rgb(var(--theme-primary)/0.10)] p-5 shadow-inner dark:border-white/10 dark:from-white/[0.08] dark:via-white/[0.03] dark:to-[rgb(var(--theme-primary)/0.16)] sm:p-7">
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">鍙樺寲瓒嬪娍</p>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{chartData.length > 1 ? `浠?${format(new Date(weights[0].date), 'M鏈坉鏃?)} 寮€濮嬬殑鐪熷疄璁板綍` : '璁板綍浼氬湪杩欓噷鑷劧寤跺睍'}</p>
           </div>
-        )}
-      </div>
+          {change !== null && (
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-2 text-sm font-semibold shadow-sm dark:bg-black/15" style={{ color: themeColor }}>
+              {change < 0 ? <TrendingDown className="h-4 w-4" /> : change > 0 ? <TrendingUp className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+              {change === 0 ? '淇濇寔涓嶅彉' : `${change > 0 ? '+' : ''}${change.toFixed(1)} kg`}
+            </div>
+          )}
+        </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-3">
-        <input
-          type="number"
-          step="0.1"
-          min="1"
-          max="300"
-          placeholder="输入今日体重 (kg)"
-          value={newWeight}
-          onChange={(e) => setNewWeight(e.target.value)}
-          className="apple-input min-w-0 flex-1"
-          required
-        />
-        <button
-          type="submit"
-          disabled={!newWeight}
-          className="apple-button px-5"
-        >
-          <Plus className="w-4 h-4" />
-          打卡
+        <div className="relative mt-5 h-64 w-full sm:h-72">
+          {chartData.length > 1 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 18, right: 6, bottom: 0, left: 6 }}>
+                <defs>
+                  <linearGradient id="weight-trend-fill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={themeColor} stopOpacity={0.34} />
+                    <stop offset="100%" stopColor={themeColor} stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="displayDate" tickLine={false} axisLine={false} tick={{ fill: '#71717a', fontSize: 12 }} dy={10} />
+                <YAxis hide domain={chartDomain} />
+                <Tooltip
+                  cursor={{ stroke: themeColor, strokeOpacity: 0.25, strokeDasharray: '4 5' }}
+                  contentStyle={{ borderRadius: '16px', border: '1px solid rgb(0 0 0 / 0.08)', boxShadow: '0 16px 36px rgb(0 0 0 / 0.14)', background: 'rgb(255 255 255 / 0.92)', padding: '10px 12px' }}
+                  labelStyle={{ color: '#71717a', fontSize: 12, marginBottom: 3 }}
+                  formatter={(value: number) => [`${Number(value).toFixed(1)} kg`, '浣撻噸']}
+                />
+                <Area type="monotone" dataKey="weight" stroke={themeColor} strokeWidth={3} fill="url(#weight-trend-fill)" dot={{ r: 4, fill: themeColor, stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6, fill: themeColor, stroke: '#fff', strokeWidth: 3 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : chartData.length === 1 ? (
+            <div className="relative flex h-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-white/30 text-center dark:bg-black/10">
+              <svg aria-hidden="true" viewBox="0 0 720 220" className="absolute inset-x-0 bottom-5 h-40 w-full text-zinc-400/40">
+                <line x1="48" y1="120" x2="672" y2="120" stroke="currentColor" strokeDasharray="5 10" strokeWidth="2" />
+                <circle cx="360" cy="120" r="12" fill={themeColor} stroke="white" strokeWidth="5" />
+                <circle cx="360" cy="120" r="24" fill={themeColor} fillOpacity="0.13" />
+              </svg>
+              <div className="relative z-10 -mt-8">
+                <p className="text-4xl font-semibold tracking-[-0.06em] text-zinc-950 dark:text-white">{latestWeight?.toFixed(1)}<span className="ml-1 text-base font-medium text-zinc-500">kg</span></p>
+                <p className="mt-3 text-sm text-zinc-500">杩欐槸绗竴绗旇褰曪紱鍐嶆墦鍗′竴娆★紝灏变細鐢熸垚鐪熷疄瓒嬪娍銆?/p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300/80 text-center dark:border-zinc-700">
+              <Scale className="mb-3 h-7 w-7 text-zinc-400" />
+              <p className="text-sm font-medium text-zinc-500">浠婂ぉ鐨勬暟瀛楋紝浼氭垚涓虹涓€鏉¤秼鍔裤€?/p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3 sm:flex-row" noValidate>
+        <label className="sr-only" htmlFor="weight-input">杈撳叆浠婃棩浣撻噸锛坘g锛?/label>
+        <input id="weight-input" type="number" step="0.1" min="1" max="300" inputMode="decimal" placeholder="杈撳叆浠婃棩浣撻噸锛坘g锛? value={newWeight} onChange={(event) => { setNewWeight(event.target.value); setFormError(''); }} className="apple-input min-w-0 flex-1" required />
+        <button type="submit" disabled={isSaving || !newWeight} className="apple-button justify-center px-6">
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          {isSaving ? '淇濆瓨涓? : '鎵撳崱'}
         </button>
       </form>
+      {formError && <p role="alert" className="mt-3 text-sm font-medium text-red-600">{formError}</p>}
     </div>
   );
 }
+
