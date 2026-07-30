@@ -47,3 +47,16 @@ npm run build
 ```
 
 生产构建会生成 `manifest.webmanifest` 和 Service Worker；支持安装为轻量 PWA，并缓存应用外壳以改善弱网下的启动体验。
+
+## 新闻资讯接口
+
+新闻页通过 Vercel Function `GET /api/news` 获取资讯，而不是让浏览器调用第三方 RSS 代理。这样可以由服务端处理跨域、8 秒超时和 5 分钟 CDN 缓存，并且只展示实际请求成功的源。
+
+可选参数：
+
+- `region=cn|intl|all`，默认 `cn`
+- `topic=tech|finance|ai|all`，默认 `all`
+
+国内源为 IT之家、少数派和 36氪的官方 RSS；国际源为 Hacker News、The Verge 和 OpenAI News 的官方 RSS。响应会包含 `items`、成功的 `sources` 和 `failedSources`，因此前端不会用虚构内容或虚构来源补位。
+
+本地联调该接口请使用 `vercel dev`；仅运行 `npm run dev` 时 Vite 不会启动 `api/news.ts`。
