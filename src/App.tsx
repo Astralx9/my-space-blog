@@ -10,7 +10,7 @@ import Todo from './pages/Todo';
 import { useStore } from './store/useStore';
 import { useAuth } from './hooks/useAuth';
 import { isSupabaseConfigured } from './lib/supabase';
-import { Loader2, LogIn, UserPlus } from 'lucide-react';
+import { ArrowRight, Loader2, LogIn, UserPlus } from 'lucide-react';
 
 const formatAuthError = (error: unknown, mode: 'signin' | 'signup') => {
   const details = error && typeof error === 'object'
@@ -89,17 +89,25 @@ function AuthScreen() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black px-4">
-      <form noValidate onSubmit={handleSubmit} className="w-full max-w-md bg-white dark:bg-zinc-950 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
-        <div className="flex items-center gap-3 mb-8">
-          {mode === 'signin' ? <LogIn className="w-6 h-6 theme-text-primary" /> : <UserPlus className="w-6 h-6 theme-text-primary" />}
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f5f5f7] px-5 py-12 text-zinc-950 dark:bg-black dark:text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgb(var(--theme-primary)/0.20),transparent_32%),radial-gradient(circle_at_82%_78%,rgb(var(--theme-secondary)/0.16),transparent_30%)]" />
+      <form noValidate onSubmit={handleSubmit} className="apple-surface relative z-10 w-full max-w-[30rem] rounded-[2.75rem] p-8 sm:p-12">
+        <div className="mb-10 flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-950 text-white shadow-lg dark:bg-white dark:text-zinc-950">
+            {mode === 'signin' ? <LogIn className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+          </div>
           <div>
-            <h1 className="text-2xl font-bold">My Space</h1>
-            <p className="text-sm text-zinc-500">{mode === 'signin' ? '登录后访问你的空间' : '创建一个空间账号'}</p>
+            <p className="eyebrow mb-1">Private space</p>
+            <h1 className="text-3xl font-semibold tracking-[-0.045em]">Astral Space</h1>
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="mb-8">
+          <h2 className="text-4xl font-semibold tracking-[-0.05em]">{mode === 'signin' ? '欢迎回来。' : '创建你的空间。'}</h2>
+          <p className="mt-3 text-[15px] leading-relaxed text-zinc-500">{mode === 'signin' ? '登录后继续浏览你的记录、照片和日常。' : '用一个账号保存只属于你的片段。'}</p>
+        </div>
+
+        <div className="space-y-3">
           <input
             type="email"
             required
@@ -107,7 +115,7 @@ function AuthScreen() {
             placeholder="邮箱"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent outline-none focus:ring-2 theme-focus"
+            className="apple-input"
           />
           <input
             type="password"
@@ -117,14 +125,15 @@ function AuthScreen() {
             placeholder="密码（至少 6 位）"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent outline-none focus:ring-2 theme-focus"
+            className="apple-input"
           />
         </div>
 
-        {message && <p role="alert" aria-live="assertive" className="mt-4 text-sm text-red-600">{message}</p>}
+        {message && <p role="alert" aria-live="assertive" className="mt-4 text-sm leading-relaxed text-red-600">{message}</p>}
 
-        <button type="submit" disabled={submitting} className="mt-6 w-full rounded-xl theme-bg-primary text-white py-3 font-medium disabled:opacity-50">
-          {submitting ? '处理中...' : mode === 'signin' ? '登录' : '注册'}
+        <button type="submit" disabled={submitting} className="apple-button mt-7 w-full">
+          {submitting ? '处理中...' : mode === 'signin' ? '进入空间' : '创建账号'}
+          {!submitting && <ArrowRight className="h-4 w-4" />}
         </button>
 
         <button
@@ -133,7 +142,7 @@ function AuthScreen() {
             setMode(mode === 'signin' ? 'signup' : 'signin');
             setMessage('');
           }}
-          className="mt-4 w-full text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className="mt-5 min-h-11 w-full rounded-full text-sm font-medium text-zinc-500 transition hover:bg-black/[0.04] hover:text-zinc-900 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"
         >
           {mode === 'signin' ? '还没有账号？注册' : '已有账号？登录'}
         </button>
@@ -155,7 +164,7 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin theme-text-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-[rgb(var(--theme-primary))]" />
           <p className="text-sm font-medium text-zinc-500">正在同步数据...</p>
         </div>
       </div>
