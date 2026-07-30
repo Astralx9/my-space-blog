@@ -52,19 +52,20 @@ export default function Todo() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight mb-2">待办与流程</h1>
-        <p className="text-zinc-500 dark:text-zinc-400">管理您的任务清单，并将复杂事项拆分为详细流程。</p>
-      </div>
+    <div className="page-enter space-y-14 md:space-y-20">
+      <header className="flex min-h-[42vh] flex-col justify-end text-white">
+        <p className="hero-text-shadow mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Focus</p>
+        <h1 className="page-title hero-text-shadow">待办与流程。</h1>
+        <p className="hero-text-shadow mt-6 max-w-2xl text-lg font-medium text-white/85 md:text-xl">一次只推进一件重要的事，把复杂事项拆成看得见的下一步。</p>
+      </header>
 
-      <form onSubmit={handleAddTodo} className="bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md p-6 rounded-3xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-sm space-y-4">
+      <form onSubmit={handleAddTodo} className="apple-surface space-y-5 rounded-[2.5rem] p-7 sm:p-10">
         <input
           type="text"
           placeholder="新任务标题..."
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
-          className="w-full text-lg font-bold bg-transparent border-none outline-none placeholder:text-zinc-400 focus:ring-0 px-0"
+          className="w-full border-none bg-transparent px-0 text-3xl font-semibold tracking-[-0.04em] outline-none placeholder:text-zinc-300 focus:ring-0 dark:placeholder:text-zinc-700"
           required
         />
         <input
@@ -72,13 +73,13 @@ export default function Todo() {
           placeholder="添加备注描述（可选）..."
           value={newDesc}
           onChange={(e) => setNewDesc(e.target.value)}
-          className="w-full text-sm text-zinc-600 dark:text-zinc-400 bg-transparent border-none outline-none placeholder:text-zinc-500 focus:ring-0 px-0"
+          className="w-full border-none bg-transparent px-0 text-[15px] text-zinc-600 outline-none placeholder:text-zinc-400 focus:ring-0 dark:text-zinc-400"
         />
-        <div className="flex justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800">
+        <div className="flex justify-end border-t border-black/[0.07] pt-5 dark:border-white/[0.09]">
           <button
             type="submit"
             disabled={!newTitle.trim()}
-            className="flex items-center gap-2 px-6 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:opacity-50 transition-colors shadow-sm text-sm"
+            className="apple-button"
           >
             <Plus className="w-4 h-4" />
             创建任务
@@ -95,20 +96,20 @@ export default function Todo() {
               : todo.completed ? 100 : 0;
 
             return (
-              <div 
+              <div
                 key={todo.id} 
-                className={`bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md rounded-2xl border ${todo.completed ? 'theme-border-primary' : 'border-zinc-200/50 dark:border-zinc-800/50'} shadow-sm overflow-hidden transition-colors`}
+                className={`apple-surface overflow-hidden rounded-[2rem] transition ${todo.completed ? '!border-emerald-500/30' : ''}`}
               >
-                <div className="p-4 sm:p-5 flex items-start sm:items-center gap-4">
+                <div className="flex items-start gap-4 p-5 sm:items-center sm:p-7">
                   <button 
                     onClick={() => toggleTodoComplete(todo.id, todo.completed)}
-                    className={`mt-1 sm:mt-0 shrink-0 transition-colors ${todo.completed ? 'theme-text-secondary' : 'text-zinc-300 theme-hover-secondary dark:text-zinc-600'}`}
+                    className={`mt-1 sm:mt-0 shrink-0 transition-colors ${todo.completed ? 'text-emerald-500' : 'text-zinc-300 hover:text-emerald-400 dark:text-zinc-600 dark:hover:text-emerald-500'}`}
                   >
                     {todo.completed ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
                   </button>
                   
                   <div className="flex-1 min-w-0">
-                    <h3 className={`text-base sm:text-lg font-bold transition-all ${todo.completed ? 'text-zinc-400 line-through' : 'text-zinc-900 dark:text-zinc-100'}`}>
+                    <h3 className={`text-lg font-semibold tracking-[-0.025em] transition-all sm:text-xl ${todo.completed ? 'text-zinc-400 line-through' : 'text-zinc-900 dark:text-zinc-100'}`}>
                       {todo.title}
                     </h3>
                     {todo.description && (
@@ -122,7 +123,7 @@ export default function Todo() {
                     {todo.steps.length > 0 && (
                       <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-zinc-500">
                         <div className="w-16 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                          <div className="h-full theme-bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
+                          <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${progress}%` }} />
                         </div>
                         {progress}%
                       </div>
@@ -148,7 +149,7 @@ export default function Todo() {
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t border-zinc-100 dark:border-zinc-800/50 p-4 sm:p-5 bg-zinc-50/50 dark:bg-zinc-900/20">
+                  <div className="border-t border-black/[0.07] bg-black/[0.025] p-5 sm:p-7 dark:border-white/[0.08] dark:bg-white/[0.025]">
                     <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-4 flex items-center gap-2">
                       <GripVertical className="w-4 h-4 text-zinc-400" />
                       执行流程
@@ -159,7 +160,7 @@ export default function Todo() {
                         <div key={step.id} className="flex items-center gap-3 group">
                           <button 
                             onClick={() => toggleStepComplete(todo.id, todo.steps, step.id)}
-                            className={`shrink-0 transition-colors ${step.completed ? 'theme-text-secondary' : 'text-zinc-300 theme-hover-secondary dark:text-zinc-600'}`}
+                            className={`shrink-0 transition-colors ${step.completed ? 'text-emerald-500' : 'text-zinc-300 hover:text-emerald-400 dark:text-zinc-600 dark:hover:text-emerald-500'}`}
                           >
                             {step.completed ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
                           </button>
@@ -182,12 +183,12 @@ export default function Todo() {
                         placeholder="添加新步骤..."
                         value={stepInput}
                         onChange={(e) => setStepInput(e.target.value)}
-                        className="flex-1 px-3 py-1.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none theme-focus transition-colors"
+                        className="apple-input min-h-10 flex-1 py-2"
                       />
                       <button 
                         type="submit"
                         disabled={!stepInput.trim()}
-                        className="px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-medium rounded-lg disabled:opacity-50"
+                        className="apple-button min-h-10 px-4 py-2"
                       >
                         添加
                       </button>
@@ -198,7 +199,7 @@ export default function Todo() {
             );
           })
         ) : (
-          <div className="py-24 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl">
+          <div className="apple-surface rounded-[2.5rem] py-24 text-center">
             <CheckCircle2 className="w-12 h-12 text-zinc-300 dark:text-zinc-700 mx-auto mb-4" />
             <p className="text-zinc-500">太棒了，所有任务都已完成！</p>
           </div>
