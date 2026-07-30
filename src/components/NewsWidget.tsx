@@ -104,42 +104,42 @@ export default function NewsWidget() {
   }, [region, topic]);
 
   return (
-    <div className="bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md p-6 rounded-3xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-sm transition-colors duration-300 flex flex-col h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h2 className="text-xl font-bold flex items-center gap-2 shrink-0">
-          <Globe className="w-6 h-6" style={{ color: extractedColors?.secondary || 'rgb(var(--theme-secondary))' }} />
+    <div className="apple-surface flex h-full flex-col rounded-[2.5rem] p-7 sm:p-10">
+      <div className="mb-8 flex flex-col justify-between gap-5 2xl:flex-row 2xl:items-center">
+        <h2 className="flex shrink-0 items-center gap-3 text-2xl font-semibold tracking-[-0.035em]">
+          <Globe className="w-6 h-6" style={{ color: extractedColors?.secondary || '#10b981' }} />
           今日资讯速递
         </h2>
         
-        <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
           {/* Region Filter */}
-          <div className="flex bg-zinc-100/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] backdrop-blur-sm p-1 rounded-xl">
+          <div className="segmented-control">
             <button
               onClick={() => setRegion('all')}
-              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+              className={`segmented-button ${
                 region === 'all'
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  ? 'segmented-button-active'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
               }`}
             >
               全部
             </button>
             <button
               onClick={() => setRegion('cn')}
-              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+              className={`segmented-button ${
                 region === 'cn'
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  ? 'segmented-button-active'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
               }`}
             >
               国内
             </button>
             <button
               onClick={() => setRegion('intl')}
-              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+              className={`segmented-button ${
                 region === 'intl'
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  ? 'segmented-button-active'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
               }`}
             >
               国际
@@ -147,43 +147,43 @@ export default function NewsWidget() {
           </div>
 
           {/* Topic Filter */}
-          <div className="flex bg-zinc-100/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] backdrop-blur-sm p-1 rounded-xl">
+          <div className="segmented-control">
             <button
               onClick={() => setTopic('all')}
-              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+              className={`segmented-button ${
                 topic === 'all'
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  ? 'segmented-button-active'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
               }`}
             >
               综合
             </button>
             <button
               onClick={() => setTopic('tech')}
-              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+              className={`segmented-button ${
                 topic === 'tech'
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  ? 'segmented-button-active'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
               }`}
             >
               科技
             </button>
             <button
               onClick={() => setTopic('ai')}
-              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+              className={`segmented-button ${
                 topic === 'ai'
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  ? 'segmented-button-active'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
               }`}
             >
               AI
             </button>
             <button
               onClick={() => setTopic('finance')}
-              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+              className={`segmented-button ${
                 topic === 'finance'
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  ? 'segmented-button-active'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
               }`}
             >
               财经
@@ -192,10 +192,10 @@ export default function NewsWidget() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-4">
+      <div className="-mr-2 flex-1 space-y-4 overflow-y-auto pr-2">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-40 text-zinc-400 space-y-3">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: extractedColors?.secondary || 'rgb(var(--theme-secondary))' }} />
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: extractedColors?.secondary || '#10b981' }} />
             <p className="text-sm">正在聚合全网资讯...</p>
           </div>
         ) : error ? (
@@ -203,9 +203,9 @@ export default function NewsWidget() {
             {error}
           </div>
         ) : news.length > 0 ? (
-          <ul className="space-y-4">
+          <ul className="divide-y divide-black/[0.06] dark:divide-white/[0.08]">
             {news.map((item, idx) => (
-              <li key={idx} className="group">
+              <li key={idx} className="group py-4 first:pt-0">
                 <a 
                   href={item.link} 
                   target="_blank" 
@@ -213,13 +213,13 @@ export default function NewsWidget() {
                   className="block"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full mt-2 shrink-0 transition-colors" style={{ backgroundColor: extractedColors?.secondary || 'rgb(var(--theme-secondary))' }} />
+                    <div className="w-1.5 h-1.5 rounded-full mt-2 shrink-0 transition-colors" style={{ backgroundColor: extractedColors?.secondary || '#10b981' }} />
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 theme-hover-primary transition-colors line-clamp-2">
+                      <h3 className="line-clamp-2 text-[15px] font-medium leading-snug text-zinc-900 transition-colors group-hover:text-[rgb(var(--theme-primary))] dark:text-zinc-100">
                         {item.title}
                       </h3>
                       <div className="flex items-center gap-2 mt-1.5 text-xs text-zinc-500">
-                        <span className="font-medium px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded">
+                        <span className="font-medium">
                           {item.source}
                         </span>
                         <span>{format(new Date(item.pubDate), 'HH:mm')}</span>
