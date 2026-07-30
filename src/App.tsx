@@ -7,6 +7,8 @@ import PostDetail from './pages/PostDetail';
 import Gallery from './pages/Gallery';
 import Editor from './pages/Editor';
 import Todo from './pages/Todo';
+import News from './pages/News';
+import Weight from './pages/Weight';
 import { useStore } from './store/useStore';
 import { useAuth } from './hooks/useAuth';
 import { isSupabaseConfigured } from './lib/supabase';
@@ -184,6 +186,8 @@ function App() {
           <Route path="editor" element={<Editor />} />
           <Route path="editor/:id" element={<Editor />} />
           <Route path="todo" element={<Todo />} />
+          <Route path="news" element={<News />} />
+          <Route path="weight" element={<Weight />} />
         </Route>
       </Routes>
     </BrowserRouter>
