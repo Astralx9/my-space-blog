@@ -1,149 +1,130 @@
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
+import { ArrowDown, ArrowUpRight } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  PieChart,
+  Pie,
+  Cell as PieCell,
+} from 'recharts';
 import { useStore } from '../store/useStore';
-import { useMemo, useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Cell as PieCell } from 'recharts';
 import PostCard from '../components/PostCard';
 import WeightTracker from '../components/WeightTracker';
 import NewsWidget from '../components/NewsWidget';
-import { format } from 'date-fns';
-import { extractImageColors } from '../lib/extractImageColors';
 
 export default function Home() {
   const posts = useStore((state) => state.posts);
   const photos = useStore((state) => state.photos);
-  const setExtractedColors = useStore((state) => state.setExtractedColors);
-  const setPhotoColors = useStore((state) => state.setPhotoColors);
   const extractedColors = useStore((state) => state.extractedColors);
   const publishedPosts = useMemo(() => posts.filter((post) => !post.isDraft), [posts]);
   const recentPosts = publishedPosts.slice(0, 3);
-  const [bgPhoto, setBgPhoto] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!extractedColors) {
-      document.documentElement.style.setProperty('--theme-primary', '59 130 246');
-      document.documentElement.style.setProperty('--theme-secondary', '16 185 129');
-      return;
-    }
-
-    const toChannels = (color: string) => color.match(/\d+/g)?.slice(0, 3).join(' ');
-    const primary = toChannels(extractedColors.primary);
-    const secondary = toChannels(extractedColors.secondary);
-
-    if (primary) document.documentElement.style.setProperty('--theme-primary', primary);
-    if (secondary) document.documentElement.style.setProperty('--theme-secondary', secondary);
-  }, [extractedColors]);
-
-  useEffect(() => {
-    if (photos.length === 0) {
-      setBgPhoto(null);
-      setExtractedColors(null);
-      return;
-    }
-
-    const random = photos[Math.floor(Math.random() * photos.length)];
-    setBgPhoto(random.url);
-    if (random.extractedColors) {
-      setExtractedColors(random.extractedColors);
-      return;
-    }
-
-    // Historical photos may predate the stored palette. Derive it once from
-    // the image, apply it immediately, then persist it for future visits.
-    let active = true;
-    const image = new Image();
-    image.crossOrigin = 'anonymous';
-    image.onload = () => {
-      try {
-        const colors = extractImageColors(image);
-        if (!active || !colors) return;
-        setExtractedColors(colors);
-        void setPhotoColors(random.id, colors).catch(() => undefined);
-      } catch {
-        if (active) setExtractedColors(null);
-      }
-    };
-    image.onerror = () => {
-      if (active) setExtractedColors(null);
-    };
-    image.src = random.url;
-    return () => {
-      active = false;
-    };
-  }, [photos, setExtractedColors, setPhotoColors]);
-
-  // Statistics
   const stats = useMemo(() => {
     let diary = 0;
     let learning = 0;
     const monthlyData: Record<string, number> = {};
 
     publishedPosts.forEach((post) => {
-      if (post.category === 'diary') diary++;
-      if (post.category === 'learning') learning++;
-
+      if (post.category === 'diary') diary += 1;
+      if (post.category === 'learning') learning += 1;
       const month = format(new Date(post.createdAt), 'MMM');
       monthlyData[month] = (monthlyData[month] || 0) + 1;
     });
 
-    const monthlyChartData = Object.keys(monthlyData).map((key) => ({
-      name: key,
-      count: monthlyData[key],
-    })).slice(-6); // last 6 months
-
-    return { diary, learning, monthlyChartData };
+    return {
+      diary,
+      learning,
+      monthlyChartData: Object.keys(monthlyData)
+        .map((name) => ({ name, count: monthlyData[name] }))
+        .slice(-6),
+    };
   }, [publishedPosts]);
 
   const pieData = [
-    { name: '日记', value: stats.diary, color: extractedColors?.secondary || 'rgb(var(--theme-secondary))' },
-    { name: '学习', value: stats.learning, color: extractedColors?.primary || 'rgb(var(--theme-primary))' },
+    { name: '日记', value: stats.diary, color: extractedColors?.secondary || '#34c759' },
+    { name: '学习', value: stats.learning, color: extractedColors?.primary || '#0071e3' },
   ];
 
   return (
-    <>
-      {bgPhoto && (
-        <div
-          className="fixed inset-0 md:left-20 z-[-1] bg-cover bg-center bg-no-repeat transition-opacity duration-1000 after:content-[''] after:absolute after:inset-0 after:bg-black/10 dark:after:bg-black/30"
-          style={{ 
-            backgroundImage: `url(${bgPhoto})`,
-            left: 'var(--sidebar-width, 16rem)'
-          }}
-        />
-      )}
-
-      <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* Header Profile */}
-        <section className="flex flex-col gap-4 bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md p-8 rounded-3xl shadow-sm border border-zinc-200/50 dark:border-zinc-800/50 transition-colors duration-300">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
-            Welcome to <span 
-              className="text-transparent bg-clip-text drop-shadow-sm"
-              style={{ 
-                backgroundImage: extractedColors 
-                  ? `linear-gradient(to right, ${extractedColors.primary}, ${extractedColors.secondary})`
-                  : 'linear-gradient(to right, rgb(var(--theme-primary)), rgb(var(--theme-secondary)))'
-              }}
-            >Astral's Space</span>
-          </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
+    <div className="page-enter space-y-24 md:space-y-32">
+      <section className="flex min-h-[72vh] max-w-6xl flex-col justify-end pb-10 text-white md:min-h-[78vh] md:pb-16">
+        <p className="hero-text-shadow mb-6 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
+          Personal archive · {photos.length} moments
+        </p>
+        <h1 className="display-title hero-text-shadow max-w-6xl">
+          留住此刻，
+          <br />
+          <span
+            className="bg-clip-text text-transparent"
+            style={{
+              backgroundImage: extractedColors
+                ? `linear-gradient(100deg, #fff 5%, ${extractedColors.secondary} 88%)`
+                : 'linear-gradient(100deg, #fff 5%, #c7e4ff 88%)',
+            }}
+          >
+            也留住自己。
+          </span>
+        </h1>
+        <div className="mt-10 flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-end">
+          <p className="hero-text-shadow max-w-xl text-lg font-medium leading-relaxed text-white/90 md:text-2xl">
             本来无一物，何处惹尘埃。
           </p>
-        </section>
+          <a
+            href="#today"
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/35 bg-black/15 text-white backdrop-blur-md transition hover:translate-y-1 hover:bg-black/25"
+            aria-label="继续浏览"
+          >
+            <ArrowDown className="h-5 w-5" />
+          </a>
+        </div>
+      </section>
 
-        {/* News and Weight Tracker Widgets */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-[450px]">
+      <section id="today" className="scroll-mt-10 space-y-10">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div>
+            <p className="eyebrow mb-4">Today</p>
+            <h2 className="section-title max-w-3xl">今天，只看最值得关注的事。</h2>
+          </div>
+          <Link to="/editor" className="apple-button-secondary w-fit">
+            写下此刻
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="min-h-[34rem] lg:col-span-8">
             <NewsWidget />
           </div>
-          <div className="h-[450px]">
+          <div className="lg:col-span-4">
             <WeightTracker />
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Statistics Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 p-6 bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md border border-zinc-200/50 dark:border-zinc-800/50 rounded-3xl shadow-sm transition-colors duration-300">
-            <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-              近半年发布趋势
-            </h2>
-            <div className="h-64 w-full">
+      <section className="space-y-10">
+        <div>
+          <p className="eyebrow mb-4">Patterns</p>
+          <h2 className="section-title">让记录形成自己的节奏。</h2>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="apple-surface rounded-[2.5rem] p-7 sm:p-10 lg:col-span-2">
+            <div className="mb-10 flex items-end justify-between">
+              <div>
+                <p className="text-sm font-semibold text-zinc-500">近半年发布趋势</p>
+                <p className="mt-2 text-4xl font-semibold tracking-[-0.045em]">
+                  {publishedPosts.length}
+                  <span className="ml-2 text-base font-medium text-zinc-400">篇记录</span>
+                </p>
+              </div>
+            </div>
+            <div className="h-72 w-full">
               {stats.monthlyChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.monthlyChartData}>
@@ -151,28 +132,28 @@ export default function Home() {
                     <YAxis stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
                     <Tooltip
                       cursor={{ fill: 'transparent' }}
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-white)' }}
+                      contentStyle={{
+                        borderRadius: '16px',
+                        border: 'none',
+                        boxShadow: '0 12px 36px rgb(0 0 0 / 0.14)',
+                      }}
                     />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                    <Bar dataKey="count" radius={[8, 8, 8, 8]}>
                       {stats.monthlyChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={extractedColors?.primary || 'rgb(var(--theme-primary))'} />
+                        <Cell key={`${entry.name}-${index}`} fill={extractedColors?.primary || '#0071e3'} />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-full flex items-center justify-center text-zinc-400 text-sm">
-                  暂无数据
-                </div>
+                <div className="flex h-full items-center justify-center text-sm text-zinc-400">暂无数据</div>
               )}
             </div>
           </div>
 
-          <div className="p-6 bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md border border-zinc-200/50 dark:border-zinc-800/50 rounded-3xl shadow-sm transition-colors duration-300">
-            <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-              内容占比
-            </h2>
-            <div className="h-64 w-full relative">
+          <div className="apple-surface rounded-[2.5rem] p-7 sm:p-10">
+            <p className="text-sm font-semibold text-zinc-500">内容占比</p>
+            <div className="relative mt-6 h-72 w-full">
               {publishedPosts.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -180,54 +161,59 @@ export default function Home() {
                       data={pieData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
+                      innerRadius={68}
+                      outerRadius={92}
+                      paddingAngle={4}
                       dataKey="value"
+                      cornerRadius={8}
                     >
                       {pieData.map((entry, index) => (
-                        <PieCell key={`cell-${index}`} fill={entry.color} />
+                        <PieCell key={`${entry.name}-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    />
+                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none' }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-full flex items-center justify-center text-zinc-400 text-sm">
-                  暂无数据
-                </div>
+                <div className="flex h-full items-center justify-center text-sm text-zinc-400">暂无数据</div>
               )}
-              
+
               {publishedPosts.length > 0 && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none flex-col">
-                  <span className="text-3xl font-bold">{publishedPosts.length}</span>
-                  <span className="text-xs text-zinc-500">总篇数</span>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-4xl font-semibold tracking-[-0.04em]">{publishedPosts.length}</span>
+                  <span className="text-xs font-medium text-zinc-500">总篇数</span>
                 </div>
               )}
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Recent Posts Section */}
-        <section className="space-y-6">
-          <div className="bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md p-6 rounded-3xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-sm transition-colors duration-300">
-            <h2 className="text-2xl font-bold tracking-tight mb-6">最新动态</h2>
-            {recentPosts.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recentPosts.map((post) => (
-                  <PostCard key={post.id} post={post} />
-                ))}
-              </div>
-            ) : (
-              <div className="p-12 text-center border border-dashed border-zinc-300 dark:border-zinc-700 rounded-3xl">
-                <p className="text-zinc-500 mb-4">还没有任何记录，快去发布第一篇文章吧！</p>
-              </div>
-            )}
+      <section className="space-y-10">
+        <div className="flex items-end justify-between gap-6">
+          <div>
+            <p className="eyebrow mb-4">Latest stories</p>
+            <h2 className="section-title">最近写下的故事。</h2>
           </div>
-        </section>
-      </div>
-    </>
+          <Link
+            to="/posts"
+            className="hidden items-center gap-1 text-sm font-semibold text-zinc-600 hover:text-zinc-950 sm:flex dark:text-zinc-300 dark:hover:text-white"
+          >
+            查看全部
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        {recentPosts.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {recentPosts.map((post) => <PostCard key={post.id} post={post} />)}
+          </div>
+        ) : (
+          <div className="apple-surface rounded-[2.5rem] p-16 text-center">
+            <p className="mb-4 text-zinc-500">还没有任何记录，快去发布第一篇文章吧！</p>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
