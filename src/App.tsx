@@ -12,6 +12,29 @@ import { useAuth } from './hooks/useAuth';
 import { isSupabaseConfigured } from './lib/supabase';
 import { Loader2, LogIn, UserPlus } from 'lucide-react';
 
+const formatAuthError = (error: unknown, mode: 'signin' | 'signup') => {
+  const details = error && typeof error === 'object'
+    ? error as { code?: string; status?: number; message?: string }
+    : undefined;
+  const code = details?.code || '';
+  const status = details?.status;
+  const message = details?.message || '';
+
+  if (status === 429 || /rate limit|too many requests/i.test(message)) return '尝试次数过多，请稍后再试。';
+  if (/failed to fetch|network|fetch/i.test(message)) return '无法连接登录服务，请检查网络后重试。';
+  if (status && status >= 500) return '登录服务暂时不可用，请稍后再试。';
+  if (code === 'email_not_confirmed' || /email not confirmed/i.test(message)) return '邮箱尚未验证，请先查收验证邮件并完成确认。';
+  if (code === 'invalid_credentials' || /invalid login credentials/i.test(message)) return '邮箱或密码不正确，请重新输入。';
+  if (code === 'user_already_exists' || /already registered|already exists/i.test(message)) return '该邮箱已注册，请直接登录或使用其他邮箱。';
+  if (code === 'weak_password' || /password should be/i.test(message)) return '密码不符合要求，请使用至少 6 位密码。';
+  if (code === 'signup_disabled' || /signups not allowed/i.test(message)) return '当前不开放注册，请联系网站管理员。';
+  if (status === 401 || status === 403) return mode === 'signin'
+    ? '登录已被拒绝，请检查邮箱和密码后重试。'
+    : '注册请求被拒绝，请联系网站管理员。';
+
+  return mode === 'signin' ? '登录失败，请稍后重试。' : '注册失败，请稍后重试。';
+};
+
 function AuthScreen() {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -23,29 +46,51 @@ function AuthScreen() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isSupabaseConfigured) {
-      setMessage('Authentication is not configured. Contact the site administrator.');
+      setMessage('登录服务尚未完成配置，请联系网站管理员检查生产环境配置。');
+      return;
+    }
+
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setMessage('请输入邮箱地址。');
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      setMessage('请输入格式正确的邮箱地址。');
+      return;
+    }
+    if (!password) {
+      setMessage('请输入密码。');
+      return;
+    }
+    if (password.length < 6) {
+      setMessage('密码至少需要 6 位。');
       return;
     }
 
     setSubmitting(true);
     setMessage('');
 
-    const result = mode === 'signin'
-      ? await signIn(email, password)
-      : await signUp(email, password);
+    try {
+      const result = mode === 'signin'
+        ? await signIn(normalizedEmail, password)
+        : await signUp(normalizedEmail, password);
 
-    if (result.error) {
-      setMessage(result.error.message);
-    } else if (mode === 'signup') {
-      setMessage('注册成功。如果项目启用了邮箱确认，请先查收邮件。');
+      if (result.error) {
+        setMessage(formatAuthError(result.error, mode));
+      } else if (mode === 'signup') {
+        setMessage('注册成功。如果项目启用了邮箱确认，请先查收邮件。');
+      }
+    } catch (error) {
+      setMessage(formatAuthError(error, mode));
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitting(false);
   };
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black px-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-md bg-white dark:bg-zinc-950 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
+      <form noValidate onSubmit={handleSubmit} className="w-full max-w-md bg-white dark:bg-zinc-950 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
         <div className="flex items-center gap-3 mb-8">
           {mode === 'signin' ? <LogIn className="w-6 h-6 text-blue-500" /> : <UserPlus className="w-6 h-6 text-blue-500" />}
           <div>
@@ -76,7 +121,7 @@ function AuthScreen() {
           />
         </div>
 
-        {message && <p className="mt-4 text-sm text-amber-600">{message}</p>}
+        {message && <p role="alert" aria-live="assertive" className="mt-4 text-sm text-red-600">{message}</p>}
 
         <button type="submit" disabled={submitting} className="mt-6 w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-3 font-medium disabled:opacity-50">
           {submitting ? '处理中...' : mode === 'signin' ? '登录' : '注册'}
