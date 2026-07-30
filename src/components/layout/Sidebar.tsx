@@ -12,6 +12,8 @@ import {
   Moon,
   SlidersHorizontal,
   CheckSquare,
+  Newspaper,
+  Scale,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
@@ -21,6 +23,8 @@ const navItems = [
   { path: '/', label: '首页', icon: Home },
   { path: '/posts', label: '全部记录', icon: BookOpen },
   { path: '/todo', label: '待办与流程', icon: CheckSquare },
+  { path: '/news', label: '新闻资讯', icon: Newspaper },
+  { path: '/weight', label: '体重记录器', icon: Scale },
   { path: '/gallery', label: '摄影作品', icon: ImageIcon },
   { path: '/editor', label: '写点什么', icon: PenTool },
 ];
