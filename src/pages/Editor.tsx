@@ -82,41 +82,44 @@ export default function Editor() {
     return (
       <div className="py-20 text-center">
         <p className="text-zinc-500">正在加载文章，或文章不存在。</p>
-        <button onClick={() => navigate('/posts')} className="mt-4 theme-text-primary hover:underline">返回文章列表</button>
+        <button onClick={() => navigate('/posts')} className="mt-4 text-blue-600 hover:underline">返回文章列表</button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
+    <div className="page-enter mx-auto max-w-5xl">
+      <header className="flex min-h-[34vh] items-end justify-between gap-6 pb-10 text-white">
+        <div className="flex items-center gap-4">
+        <button onClick={() => navigate(-1)} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/15 transition hover:bg-black/25" aria-label="返回">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold">{isEditing ? '编辑记录' : '撰写新记录'}</h1>
-          {existingPost?.isDraft && <p className="text-sm text-amber-600 mt-1">当前为草稿，发布后才会出现在首页。</p>}
+          <p className="hero-text-shadow mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/75">Editor</p>
+          <h1 className="hero-text-shadow text-4xl font-semibold tracking-[-0.045em] md:text-6xl">{isEditing ? '继续打磨。' : '写下此刻。'}</h1>
+          {existingPost?.isDraft && <p className="hero-text-shadow mt-2 text-sm text-amber-200">当前为草稿，发布后才会出现在首页。</p>}
         </div>
       </div>
+      </header>
 
-      <div className="space-y-6">
+      <div className="apple-surface space-y-8 rounded-[2.75rem] p-7 sm:p-10 md:p-14">
         <div className="space-y-4">
           <input
             type="text"
             placeholder="文章标题…"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            className="w-full text-4xl font-bold bg-transparent border-none outline-none placeholder:text-zinc-300 dark:placeholder:text-zinc-700 focus:ring-0 px-0"
+            className="w-full border-none bg-transparent px-0 text-4xl font-semibold tracking-[-0.05em] outline-none placeholder:text-zinc-300 focus:ring-0 dark:placeholder:text-zinc-700 md:text-6xl"
           />
 
-          <div className="flex flex-wrap items-center gap-4 py-4 border-y border-zinc-100 dark:border-zinc-800">
-            <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-4 border-y border-black/[0.07] py-5 dark:border-white/[0.09]">
+            <div className="segmented-control">
               {(['diary', 'learning'] as const).map((item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => setCategory(item)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${category === item ? (item === 'diary' ? 'theme-bg-secondary text-white shadow-sm' : 'theme-bg-primary text-white shadow-sm') : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                  className={`segmented-button ${category === item ? 'segmented-button-active' : 'hover:text-zinc-900 dark:hover:text-white'}`}
                 >
                   {item === 'diary' ? '个人日记' : '学习记录'}
                 </button>
@@ -129,7 +132,7 @@ export default function Editor() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadStatus.kind === 'uploading'}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50"
+              className="apple-button-secondary min-h-9 px-4 py-1.5"
             >
               {uploadStatus.kind === 'uploading' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
               插入图片
@@ -142,11 +145,11 @@ export default function Editor() {
             placeholder="标签，用逗号分隔，例如：React, 学习, 周记"
             value={tags}
             onChange={(event) => setTags(event.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent outline-none focus:ring-2 theme-focus"
+            className="apple-input"
           />
 
           {uploadStatus.kind !== 'idle' && (
-            <p className={`text-sm ${uploadStatus.kind === 'error' ? 'text-red-600' : uploadStatus.kind === 'success' ? 'theme-text-secondary' : 'theme-text-primary'}`} role={uploadStatus.kind === 'error' ? 'alert' : 'status'}>
+            <p className={`text-sm ${uploadStatus.kind === 'error' ? 'text-red-600' : uploadStatus.kind === 'success' ? 'text-emerald-600' : 'text-blue-600'}`} role={uploadStatus.kind === 'error' ? 'alert' : 'status'}>
               {uploadStatus.message}
             </p>
           )}
@@ -155,16 +158,16 @@ export default function Editor() {
             placeholder="从这里开始撰写正文（支持 Markdown）…"
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            className="w-full h-[50vh] min-h-[300px] bg-transparent border-none outline-none placeholder:text-zinc-300 dark:placeholder:text-zinc-700 focus:ring-0 px-0 resize-none text-lg leading-relaxed"
+            className="min-h-[28rem] w-full resize-none border-none bg-transparent px-0 text-lg leading-[1.85] outline-none placeholder:text-zinc-300 focus:ring-0 dark:placeholder:text-zinc-700"
           />
         </div>
 
-        <div className="flex flex-wrap justify-end gap-3 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+        <div className="flex flex-wrap justify-end gap-3 border-t border-black/[0.07] pt-7 dark:border-white/[0.09]">
           <button
             type="button"
             onClick={() => savePost(true)}
             disabled={!title.trim() || isSubmitting}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 disabled:opacity-50"
+            className="apple-button-secondary"
           >
             <Save className="w-5 h-5" />
             保存草稿
@@ -173,7 +176,7 @@ export default function Editor() {
             type="button"
             onClick={() => savePost(false)}
             disabled={!title.trim() || !content.trim() || isSubmitting}
-            className="flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:opacity-50"
+            className="apple-button"
           >
             {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : isEditing ? <FileText className="w-5 h-5" /> : <Send className="w-5 h-5" />}
             {isEditing ? '保存并发布' : '发布文章'}
