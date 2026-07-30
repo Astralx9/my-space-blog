@@ -161,7 +161,7 @@ export default function Gallery() {
   const openPhoto = (photo: Photo) => {
     setSelectedPhoto(photo);
     setMetadata({
-      takenAt: photo.takenAt ? format(new Date(photo.takenAt), "yyyy-MM-dd'T'HH:mm") : '',
+      takenAt: photo.takenAt ? format(new Date(photo.takenAt), 'yyyy-MM-dd') : '',
       location: photo.location || '',
       story: photo.story || '',
     });
@@ -175,7 +175,7 @@ export default function Gallery() {
     setIsSavingMetadata(true);
     try {
       const nextMetadata = {
-        takenAt: metadata.takenAt ? new Date(metadata.takenAt).toISOString() : null,
+        takenAt: metadata.takenAt ? new Date(`${metadata.takenAt}T12:00:00`).toISOString() : null,
         location: metadata.location,
         story: metadata.story,
       };
@@ -268,7 +268,7 @@ export default function Gallery() {
               <h2 className="text-3xl font-semibold tracking-[-0.05em]">把这一刻留下来。</h2>
               <p className="mt-3 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">记录拍摄时的光线、地点与当下心情；这些信息只会写入你的作品记录。</p>
               <div className="mt-8 space-y-5">
-                <label className="block"><span className="mb-2 flex items-center gap-2 text-sm font-semibold"><CalendarDays className="h-4 w-4 text-[rgb(var(--theme-primary))]" />拍摄时间</span><input type="datetime-local" value={metadata.takenAt} onChange={(event) => setMetadata((current) => ({ ...current, takenAt: event.target.value }))} className="apple-input w-full" /></label>
+                <label className="block"><span className="mb-2 flex items-center gap-2 text-sm font-semibold"><CalendarDays className="h-4 w-4 text-[rgb(var(--theme-primary))]" />拍摄日期</span><input type="date" value={metadata.takenAt} onChange={(event) => setMetadata((current) => ({ ...current, takenAt: event.target.value }))} className="apple-input w-full" /><span className="mt-2 block text-xs text-zinc-500">可从日历选择，也可直接输入年月日。</span></label>
                 <label className="block"><span className="mb-2 flex items-center gap-2 text-sm font-semibold"><MapPin className="h-4 w-4 text-[rgb(var(--theme-primary))]" />拍摄地点</span><input type="text" value={metadata.location} onChange={(event) => setMetadata((current) => ({ ...current, location: event.target.value }))} placeholder="例如：香港，旺角" maxLength={120} className="apple-input w-full" /></label>
                 <label className="block"><span className="mb-2 block text-sm font-semibold">这张照片的故事</span><textarea value={metadata.story} onChange={(event) => setMetadata((current) => ({ ...current, story: event.target.value }))} placeholder="那天发生了什么？你为什么按下快门？" maxLength={2000} rows={7} className="apple-input min-h-40 w-full resize-y leading-relaxed" /></label>
               </div>
