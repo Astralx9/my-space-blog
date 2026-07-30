@@ -33,7 +33,7 @@ export default function WeightTracker() {
     <div className="bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md p-6 rounded-3xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-sm transition-colors duration-300">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold flex items-center gap-2">
-          <Scale className="w-6 h-6" style={{ color: extractedColors?.primary || '#3b82f6' }} />
+          <Scale className="w-6 h-6" style={{ color: extractedColors?.primary || 'rgb(var(--theme-primary))' }} />
           体重记录器
         </h2>
         {latestWeight && (
@@ -57,9 +57,9 @@ export default function WeightTracker() {
               <Line 
                 type="monotone" 
                 dataKey="weight" 
-                stroke={extractedColors?.primary || '#3b82f6'} 
+                stroke={extractedColors?.primary || 'rgb(var(--theme-primary))'}
                 strokeWidth={3}
-                dot={{ r: 4, fill: extractedColors?.primary || '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                dot={{ r: 4, fill: extractedColors?.primary || 'rgb(var(--theme-primary))', strokeWidth: 2, stroke: '#fff' }}
                 activeDot={{ r: 6, strokeWidth: 0 }}
               />
             </LineChart>
@@ -80,7 +80,7 @@ export default function WeightTracker() {
           placeholder="输入今日体重 (kg)"
           value={newWeight}
           onChange={(e) => setNewWeight(e.target.value)}
-          className="flex-1 px-4 py-2 bg-zinc-100/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+          className="flex-1 px-4 py-2 bg-zinc-100/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 theme-focus transition-all text-sm"
           required
         />
         <button

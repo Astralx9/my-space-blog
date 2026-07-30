@@ -107,7 +107,7 @@ export default function NewsWidget() {
     <div className="bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md p-6 rounded-3xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-sm transition-colors duration-300 flex flex-col h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h2 className="text-xl font-bold flex items-center gap-2 shrink-0">
-          <Globe className="w-6 h-6" style={{ color: extractedColors?.secondary || '#10b981' }} />
+          <Globe className="w-6 h-6" style={{ color: extractedColors?.secondary || 'rgb(var(--theme-secondary))' }} />
           今日资讯速递
         </h2>
         
@@ -195,7 +195,7 @@ export default function NewsWidget() {
       <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-4">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-40 text-zinc-400 space-y-3">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: extractedColors?.secondary || '#10b981' }} />
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: extractedColors?.secondary || 'rgb(var(--theme-secondary))' }} />
             <p className="text-sm">正在聚合全网资讯...</p>
           </div>
         ) : error ? (
@@ -213,9 +213,9 @@ export default function NewsWidget() {
                   className="block"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full mt-2 shrink-0 transition-colors" style={{ backgroundColor: extractedColors?.secondary || '#10b981' }} />
+                    <div className="w-1.5 h-1.5 rounded-full mt-2 shrink-0 transition-colors" style={{ backgroundColor: extractedColors?.secondary || 'rgb(var(--theme-secondary))' }} />
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+                      <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 theme-hover-primary transition-colors line-clamp-2">
                         {item.title}
                       </h3>
                       <div className="flex items-center gap-2 mt-1.5 text-xs text-zinc-500">

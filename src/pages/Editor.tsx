@@ -82,7 +82,7 @@ export default function Editor() {
     return (
       <div className="py-20 text-center">
         <p className="text-zinc-500">正在加载文章，或文章不存在。</p>
-        <button onClick={() => navigate('/posts')} className="mt-4 text-blue-600 hover:underline">返回文章列表</button>
+        <button onClick={() => navigate('/posts')} className="mt-4 theme-text-primary hover:underline">返回文章列表</button>
       </div>
     );
   }
@@ -116,7 +116,7 @@ export default function Editor() {
                   key={item}
                   type="button"
                   onClick={() => setCategory(item)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${category === item ? (item === 'diary' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-blue-500 text-white shadow-sm') : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${category === item ? (item === 'diary' ? 'theme-bg-secondary text-white shadow-sm' : 'theme-bg-primary text-white shadow-sm') : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
                 >
                   {item === 'diary' ? '个人日记' : '学习记录'}
                 </button>
@@ -142,11 +142,11 @@ export default function Editor() {
             placeholder="标签，用逗号分隔，例如：React, 学习, 周记"
             value={tags}
             onChange={(event) => setTags(event.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent outline-none focus:ring-2 theme-focus"
           />
 
           {uploadStatus.kind !== 'idle' && (
-            <p className={`text-sm ${uploadStatus.kind === 'error' ? 'text-red-600' : uploadStatus.kind === 'success' ? 'text-emerald-600' : 'text-blue-600'}`} role={uploadStatus.kind === 'error' ? 'alert' : 'status'}>
+            <p className={`text-sm ${uploadStatus.kind === 'error' ? 'text-red-600' : uploadStatus.kind === 'success' ? 'theme-text-secondary' : 'theme-text-primary'}`} role={uploadStatus.kind === 'error' ? 'alert' : 'status'}>
               {uploadStatus.message}
             </p>
           )}

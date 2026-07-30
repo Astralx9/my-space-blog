@@ -97,12 +97,12 @@ export default function Todo() {
             return (
               <div 
                 key={todo.id} 
-                className={`bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md rounded-2xl border ${todo.completed ? 'border-emerald-500/30 dark:border-emerald-500/20' : 'border-zinc-200/50 dark:border-zinc-800/50'} shadow-sm overflow-hidden transition-colors`}
+                className={`bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md rounded-2xl border ${todo.completed ? 'theme-border-primary' : 'border-zinc-200/50 dark:border-zinc-800/50'} shadow-sm overflow-hidden transition-colors`}
               >
                 <div className="p-4 sm:p-5 flex items-start sm:items-center gap-4">
                   <button 
                     onClick={() => toggleTodoComplete(todo.id, todo.completed)}
-                    className={`mt-1 sm:mt-0 shrink-0 transition-colors ${todo.completed ? 'text-emerald-500' : 'text-zinc-300 hover:text-emerald-400 dark:text-zinc-600 dark:hover:text-emerald-500'}`}
+                    className={`mt-1 sm:mt-0 shrink-0 transition-colors ${todo.completed ? 'theme-text-secondary' : 'text-zinc-300 theme-hover-secondary dark:text-zinc-600'}`}
                   >
                     {todo.completed ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
                   </button>
@@ -122,7 +122,7 @@ export default function Todo() {
                     {todo.steps.length > 0 && (
                       <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-zinc-500">
                         <div className="w-16 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+                          <div className="h-full theme-bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
                         </div>
                         {progress}%
                       </div>
@@ -159,7 +159,7 @@ export default function Todo() {
                         <div key={step.id} className="flex items-center gap-3 group">
                           <button 
                             onClick={() => toggleStepComplete(todo.id, todo.steps, step.id)}
-                            className={`shrink-0 transition-colors ${step.completed ? 'text-emerald-500' : 'text-zinc-300 hover:text-emerald-400 dark:text-zinc-600 dark:hover:text-emerald-500'}`}
+                            className={`shrink-0 transition-colors ${step.completed ? 'theme-text-secondary' : 'text-zinc-300 theme-hover-secondary dark:text-zinc-600'}`}
                           >
                             {step.completed ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
                           </button>
@@ -182,7 +182,7 @@ export default function Todo() {
                         placeholder="添加新步骤..."
                         value={stepInput}
                         onChange={(e) => setStepInput(e.target.value)}
-                        className="flex-1 px-3 py-1.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+                        className="flex-1 px-3 py-1.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none theme-focus transition-colors"
                       />
                       <button 
                         type="submit"

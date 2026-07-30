@@ -29,7 +29,7 @@ export default function Layout() {
 
   return (
     <div 
-      className="min-h-screen flex font-sans selection:bg-blue-100 selection:text-blue-900"
+      className="min-h-screen flex font-sans selection:bg-[rgb(var(--theme-primary)/0.25)] selection:text-zinc-950"
       style={{ 
         '--component-bg-alpha': componentOpacity / 100,
         '--sidebar-width': isCollapsed ? '5rem' : '16rem'

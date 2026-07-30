@@ -5,11 +5,13 @@ import PostCard from '../components/PostCard';
 import WeightTracker from '../components/WeightTracker';
 import NewsWidget from '../components/NewsWidget';
 import { format } from 'date-fns';
+import { extractImageColors } from '../lib/extractImageColors';
 
 export default function Home() {
   const posts = useStore((state) => state.posts);
   const photos = useStore((state) => state.photos);
   const setExtractedColors = useStore((state) => state.setExtractedColors);
+  const setPhotoColors = useStore((state) => state.setPhotoColors);
   const extractedColors = useStore((state) => state.extractedColors);
   const publishedPosts = useMemo(() => posts.filter((post) => !post.isDraft), [posts]);
   const recentPosts = publishedPosts.slice(0, 3);
@@ -39,9 +41,33 @@ export default function Home() {
 
     const random = photos[Math.floor(Math.random() * photos.length)];
     setBgPhoto(random.url);
-    // Colors are calculated during upload and stored with the photo record.
-    setExtractedColors(random.extractedColors ?? null);
-  }, [photos, setExtractedColors]);
+    if (random.extractedColors) {
+      setExtractedColors(random.extractedColors);
+      return;
+    }
+
+    // Historical photos may predate the stored palette. Derive it once from
+    // the image, apply it immediately, then persist it for future visits.
+    let active = true;
+    const image = new Image();
+    image.onload = () => {
+      try {
+        const colors = extractImageColors(image);
+        if (!active || !colors) return;
+        setExtractedColors(colors);
+        void setPhotoColors(random.id, colors).catch(() => undefined);
+      } catch {
+        if (active) setExtractedColors(null);
+      }
+    };
+    image.onerror = () => {
+      if (active) setExtractedColors(null);
+    };
+    image.src = random.url;
+    return () => {
+      active = false;
+    };
+  }, [photos, setExtractedColors, setPhotoColors]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -66,8 +92,8 @@ export default function Home() {
   }, [publishedPosts]);
 
   const pieData = [
-    { name: '日记', value: stats.diary, color: extractedColors?.secondary || '#10b981' },
-    { name: '学习', value: stats.learning, color: extractedColors?.primary || '#3b82f6' },
+    { name: '日记', value: stats.diary, color: extractedColors?.secondary || 'rgb(var(--theme-secondary))' },
+    { name: '学习', value: stats.learning, color: extractedColors?.primary || 'rgb(var(--theme-primary))' },
   ];
 
   return (
@@ -91,7 +117,7 @@ export default function Home() {
               style={{ 
                 backgroundImage: extractedColors 
                   ? `linear-gradient(to right, ${extractedColors.primary}, ${extractedColors.secondary})`
-                  : 'linear-gradient(to right, #2563eb, #10b981)'
+                  : 'linear-gradient(to right, rgb(var(--theme-primary)), rgb(var(--theme-secondary)))'
               }}
             >Astral's Space</span>
           </h1>
@@ -128,7 +154,7 @@ export default function Home() {
                     />
                     <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                       {stats.monthlyChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={extractedColors?.primary || '#3b82f6'} />
+                        <Cell key={`cell-${index}`} fill={extractedColors?.primary || 'rgb(var(--theme-primary))'} />
                       ))}
                     </Bar>
                   </BarChart>

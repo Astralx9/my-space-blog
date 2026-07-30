@@ -19,7 +19,7 @@ export default function PostDetail() {
         <h2 className="text-2xl font-bold mb-4">文章不存在或已被删除</h2>
         <button 
           onClick={() => navigate('/posts')}
-          className="text-blue-500 hover:underline"
+          className="theme-text-primary hover:underline"
         >
           返回列表
         </button>
@@ -53,7 +53,7 @@ export default function PostDetail() {
         </button>
         
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate(`/editor/${post.id}`)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-colors" title="编辑文章">
+          <button onClick={() => navigate(`/editor/${post.id}`)} className="p-2 theme-text-primary theme-bg-primary-soft rounded-full transition-colors" title="编辑文章">
             <Pencil className="w-5 h-5" />
           </button>
           <button onClick={handleDelete} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors" title="删除文章">
@@ -67,8 +67,8 @@ export default function PostDetail() {
           <span 
             className={`px-3 py-1 text-xs font-medium rounded-full flex items-center gap-1.5 ${
               isLearning 
-                ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' 
-                : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                ? 'theme-bg-primary-soft theme-text-primary'
+                : 'theme-bg-secondary-soft theme-text-secondary'
             }`}
           >
             {isLearning ? <Book className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
@@ -96,7 +96,7 @@ export default function PostDetail() {
             h1: ({ node, ...props }) => { void node; return <h1 className="text-3xl font-bold mt-12 mb-6" {...props} />; },
             h2: ({ node, ...props }) => { void node; return <h2 className="text-2xl font-bold mt-10 mb-5" {...props} />; },
             p: ({ node, ...props }) => { void node; return <p className="leading-relaxed mb-6" {...props} />; },
-            a: ({ node, ...props }) => { void node; return <a className="text-blue-600 dark:text-blue-400 hover:underline" {...props} />; },
+            a: ({ node, ...props }) => { void node; return <a className="theme-text-primary hover:underline" {...props} />; },
           }}
         >
           {post.content}

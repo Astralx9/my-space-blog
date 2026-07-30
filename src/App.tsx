@@ -92,7 +92,7 @@ function AuthScreen() {
     <main className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black px-4">
       <form noValidate onSubmit={handleSubmit} className="w-full max-w-md bg-white dark:bg-zinc-950 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
         <div className="flex items-center gap-3 mb-8">
-          {mode === 'signin' ? <LogIn className="w-6 h-6 text-blue-500" /> : <UserPlus className="w-6 h-6 text-blue-500" />}
+          {mode === 'signin' ? <LogIn className="w-6 h-6 theme-text-primary" /> : <UserPlus className="w-6 h-6 theme-text-primary" />}
           <div>
             <h1 className="text-2xl font-bold">My Space</h1>
             <p className="text-sm text-zinc-500">{mode === 'signin' ? '登录后访问你的空间' : '创建一个空间账号'}</p>
@@ -107,7 +107,7 @@ function AuthScreen() {
             placeholder="邮箱"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent outline-none focus:ring-2 theme-focus"
           />
           <input
             type="password"
@@ -117,13 +117,13 @@ function AuthScreen() {
             placeholder="密码（至少 6 位）"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent outline-none focus:ring-2 theme-focus"
           />
         </div>
 
         {message && <p role="alert" aria-live="assertive" className="mt-4 text-sm text-red-600">{message}</p>}
 
-        <button type="submit" disabled={submitting} className="mt-6 w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-3 font-medium disabled:opacity-50">
+        <button type="submit" disabled={submitting} className="mt-6 w-full rounded-xl theme-bg-primary text-white py-3 font-medium disabled:opacity-50">
           {submitting ? '处理中...' : mode === 'signin' ? '登录' : '注册'}
         </button>
 
@@ -155,7 +155,7 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <Loader2 className="w-8 h-8 animate-spin theme-text-primary" />
           <p className="text-sm font-medium text-zinc-500">正在同步数据...</p>
         </div>
       </div>

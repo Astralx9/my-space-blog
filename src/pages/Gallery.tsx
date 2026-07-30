@@ -170,15 +170,15 @@ export default function Gallery() {
             <div key={item.id} className="space-y-1.5">
               <div className="flex justify-between gap-4 text-sm">
                 <span className="truncate font-medium">{item.name}</span>
-                <span className={item.stage === 'error' ? 'text-red-600' : item.stage === 'success' ? 'text-emerald-600' : 'text-zinc-500'}>{stageLabel[item.stage]}{item.message ? `：${item.message}` : ''}</span>
+                <span className={item.stage === 'error' ? 'text-red-600' : item.stage === 'success' ? 'theme-text-secondary' : 'text-zinc-500'}>{stageLabel[item.stage]}{item.message ? `：${item.message}` : ''}</span>
               </div>
               <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-                <div className={`${item.stage === 'error' ? 'bg-red-500' : item.stage === 'success' ? 'bg-emerald-500' : 'bg-blue-500'} h-full transition-all duration-300`} style={{ width: `${item.progress}%` }} />
+                <div className={`${item.stage === 'error' ? 'bg-red-500' : item.stage === 'success' ? 'theme-bg-secondary' : 'theme-bg-primary'} h-full transition-all duration-300`} style={{ width: `${item.progress}%` }} />
               </div>
             </div>
           ))}
           {notice.kind !== 'idle' && (
-            <p role={notice.kind === 'error' ? 'alert' : 'status'} className={notice.kind === 'error' ? 'text-sm text-red-600' : 'text-sm text-emerald-600'}>{notice.message}</p>
+            <p role={notice.kind === 'error' ? 'alert' : 'status'} className={notice.kind === 'error' ? 'text-sm text-red-600' : 'text-sm theme-text-secondary'}>{notice.message}</p>
           )}
         </section>
       )}
@@ -190,7 +190,7 @@ export default function Gallery() {
               <img src={photo.url} alt="Photography work" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4">
                 <div className="flex justify-end">
-                  {!photo.extractedColors && <button onClick={() => backfillPhotoColors(photo)} className="mr-2 p-2 bg-white/20 hover:bg-blue-500 text-white rounded-full backdrop-blur-sm transition-colors" title="补齐图片配色"><Palette className="w-4 h-4" /></button>}
+                  {!photo.extractedColors && <button onClick={() => backfillPhotoColors(photo)} className="mr-2 p-2 bg-white/20 theme-bg-primary-hover text-white rounded-full backdrop-blur-sm transition-colors" title="补齐图片配色"><Palette className="w-4 h-4" /></button>}
                   <button onClick={() => { if (window.confirm('确定要删除这张照片吗？')) void deletePhoto(photo.id).catch(() => setNotice({ kind: 'error', message: '删除失败，请重试' })); }} className="p-2 bg-white/20 hover:bg-red-500 text-white rounded-full backdrop-blur-sm transition-colors" title="删除图片"><Trash2 className="w-4 h-4" /></button>
                 </div>
                 <div className="text-white text-xs font-medium drop-shadow-md">上传于 {format(photo.createdAt, 'yyyy-MM-dd')}</div>

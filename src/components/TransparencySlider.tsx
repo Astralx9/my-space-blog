@@ -30,7 +30,7 @@ export default function TransparencySlider() {
             step="5"
             value={componentOpacity}
             onChange={(e) => setComponentOpacity(Number(e.target.value))}
-            className="w-full accent-blue-500"
+            className="w-full theme-accent"
           />
           <p className="text-[10px] text-zinc-500 mt-2 leading-tight">
             调低透明度可以更好地展示背景的摄影作品。

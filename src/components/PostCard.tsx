@@ -22,8 +22,8 @@ export default function PostCard({ post }: PostCardProps) {
         <span 
           className={`px-3 py-1 text-xs font-medium rounded-full flex items-center gap-1.5 ${
             isLearning 
-              ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' 
-              : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+              ? 'theme-bg-primary-soft theme-text-primary'
+              : 'theme-bg-secondary-soft theme-text-secondary'
           }`}
         >
           {isLearning ? <Book className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
@@ -36,7 +36,7 @@ export default function PostCard({ post }: PostCardProps) {
         {post.isDraft && <span className="text-xs font-medium text-amber-700 bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 px-2 py-1 rounded-full">草稿</span>}
       </div>
       
-      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-3 theme-hover-primary transition-colors">
         {post.title}
       </h3>
       

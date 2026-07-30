@@ -11,8 +11,6 @@ export default function Sidebar() {
   const setSidebarCollapsed = useStore((state) => state.setSidebarCollapsed);
   const componentOpacity = useStore((state) => state.componentOpacity);
   const setComponentOpacity = useStore((state) => state.setComponentOpacity);
-  const extractedColors = useStore((state) => state.extractedColors);
-  
   const { isDark, toggleTheme } = useTheme();
 
   const navItems = [
@@ -41,9 +39,13 @@ export default function Sidebar() {
       )}
 
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen ${isCollapsed ? 'w-20' : 'w-64'} bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md border-r border-zinc-200/50 dark:border-zinc-800/50 flex flex-col transition-all duration-300 z-50 ${
+        className={`fixed md:sticky top-0 left-0 h-screen ${isCollapsed ? 'w-20' : 'w-64'} backdrop-blur-md border-r border-white/20 flex flex-col transition-all duration-300 z-50 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
+        style={{
+          background: 'linear-gradient(180deg, rgb(var(--theme-primary) / 0.38), rgb(var(--theme-secondary) / 0.22)), rgb(24 24 27 / 0.82)',
+          boxShadow: '12px 0 32px rgb(0 0 0 / 0.12)',
+        }}
       >
         <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           <Link to="/" className={`text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2 ${isCollapsed ? 'hidden' : 'block'}`}>
@@ -79,9 +81,10 @@ export default function Sidebar() {
                 title={isCollapsed ? item.label : undefined}
                 className={`flex items-center gap-3 ${isCollapsed ? 'justify-center px-0' : 'px-4'} py-3 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-100 font-medium'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 hover:text-zinc-900 dark:hover:text-zinc-200'
+                    ? 'font-medium text-white shadow-sm'
+                    : 'text-zinc-100/80 hover:bg-white/15 hover:text-white'
                 }`}
+                style={isActive ? { background: 'linear-gradient(90deg, rgb(var(--theme-primary) / 0.88), rgb(var(--theme-secondary) / 0.72))' } : undefined}
               >
                 <Icon 
                   className={`w-5 h-5 shrink-0`} 
@@ -92,10 +95,10 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className={`p-4 border-t border-zinc-200/50 dark:border-zinc-800/50 flex flex-col gap-4`}>
+        <div className={`p-4 border-t border-white/15 flex flex-col gap-4`}>
           {!isCollapsed && (
             <div className="px-2 space-y-2">
-              <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 mb-1">
+              <div className="flex items-center gap-2 text-sm text-zinc-100/70 mb-1">
                 <SlidersHorizontal className="w-4 h-4" />
                 <span>组件透明度</span>
               </div>
@@ -105,8 +108,7 @@ export default function Sidebar() {
                 max="100" 
                 value={componentOpacity} 
                 onChange={(e) => setComponentOpacity(Number(e.target.value))}
-                className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                style={{ accentColor: extractedColors?.primary || '#3b82f6' }}
+                className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer theme-accent"
               />
             </div>
           )}
@@ -115,7 +117,7 @@ export default function Sidebar() {
             <div className={`flex items-center ${isCollapsed ? 'flex-col justify-center' : 'justify-between px-2'} gap-4`}>
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                className="p-2 rounded-lg text-zinc-100/70 hover:text-white hover:bg-white/15 transition-colors"
                 title={isDark ? "切换为亮色" : "切换为暗色"}
               >
                 {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -123,7 +125,7 @@ export default function Sidebar() {
 
               <button
                 onClick={() => setSidebarCollapsed(!isCollapsed)}
-                className="p-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors hidden md:block"
+                className="p-2 rounded-lg text-zinc-100/70 hover:text-white hover:bg-white/15 transition-colors hidden md:block"
                 title={isCollapsed ? "展开侧边栏" : "收起侧边栏"}
               >
                 {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}

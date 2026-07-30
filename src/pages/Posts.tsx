@@ -35,7 +35,7 @@ export default function Posts() {
               placeholder="搜索标题、正文或标签…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full sm:w-64 pl-10 pr-4 py-2 bg-white/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+              className="w-full sm:w-64 pl-10 pr-4 py-2 bg-white/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 theme-focus transition-all text-sm"
             />
           </div>
 
