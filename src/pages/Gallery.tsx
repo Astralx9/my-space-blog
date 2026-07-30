@@ -196,7 +196,7 @@ export default function Gallery() {
         <p className="hero-text-shadow mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Photography</p>
         <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
         <div>
-          <h1 className="page-title hero-text-shadow">摄影作品。</h1>
+          <h1 className="page-title page-slogan-gradient hero-text-shadow">摄影作品。</h1>
           <p className="hero-text-shadow mt-6 max-w-2xl text-lg font-medium text-white/85 md:text-xl">
             {photos.length} 个被定格的瞬间。它们会成为整个空间的背景与色彩。
           </p>

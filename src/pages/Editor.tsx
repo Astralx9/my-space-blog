@@ -96,7 +96,7 @@ export default function Editor() {
         </button>
         <div>
           <p className="hero-text-shadow mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/75">Editor</p>
-          <h1 className="hero-text-shadow text-4xl font-semibold tracking-[-0.045em] md:text-6xl">{isEditing ? '继续打磨。' : '写下此刻。'}</h1>
+          <h1 className="page-slogan-gradient hero-text-shadow text-4xl font-semibold tracking-[-0.045em] md:text-6xl">{isEditing ? '继续打磨。' : '写下此刻。'}</h1>
           {existingPost?.isDraft && <p className="hero-text-shadow mt-2 text-sm text-amber-200">当前为草稿，发布后才会出现在首页。</p>}
         </div>
       </div>

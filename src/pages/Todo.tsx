@@ -55,7 +55,7 @@ export default function Todo() {
     <div className="page-enter space-y-14 md:space-y-20">
       <header className="flex min-h-[42vh] flex-col justify-end text-white">
         <p className="hero-text-shadow mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Focus</p>
-        <h1 className="page-title hero-text-shadow">待办与流程。</h1>
+        <h1 className="page-title page-slogan-gradient hero-text-shadow">待办与流程。</h1>
         <p className="hero-text-shadow mt-6 max-w-2xl text-lg font-medium text-white/85 md:text-xl">一次只推进一件重要的事，把复杂事项拆成看得见的下一步。</p>
       </header>
 
