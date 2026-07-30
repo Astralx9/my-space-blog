@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Post } from '../store/useStore';
-import { Calendar, Book, Clock, Tag } from 'lucide-react';
+import { ArrowUpRight, Book, Calendar, Clock } from 'lucide-react';
+import type { Post } from '../store/useStore';
 
 interface PostCardProps {
   post: Post;
@@ -9,46 +9,41 @@ interface PostCardProps {
 
 export default function PostCard({ post }: PostCardProps) {
   const isLearning = post.category === 'learning';
-  
-  // Extract a brief summary by stripping markdown or just taking first N chars
-  const summary = post.content.replace(/[#*`~>]/g, '').substring(0, 120) + '...';
+  const cleanContent = post.content.replace(/!\[[^\]]*]\([^)]*\)/g, '').replace(/[#*`~>]/g, '').trim();
+  const summary = cleanContent.length > 120 ? `${cleanContent.slice(0, 120)}…` : cleanContent;
 
   return (
-    <Link 
+    <Link
       to={`/post/${post.id}`}
-      className="group block p-6 bg-white/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] backdrop-blur-sm border border-zinc-100 dark:border-zinc-800 rounded-2xl hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+      className="apple-surface group flex min-h-[24rem] flex-col rounded-[2.25rem] p-7 transition duration-500 hover:-translate-y-1.5 hover:shadow-[0_30px_90px_rgb(0_0_0/0.14)] sm:p-8"
     >
-      <div className="flex items-center gap-3 mb-4">
-        <span 
-          className={`px-3 py-1 text-xs font-medium rounded-full flex items-center gap-1.5 ${
-            isLearning 
-              ? 'theme-bg-primary-soft theme-text-primary'
-              : 'theme-bg-secondary-soft theme-text-secondary'
-          }`}
-        >
-          {isLearning ? <Book className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex items-center gap-2 text-xs font-semibold text-zinc-500">
+          {isLearning ? <Book className="h-4 w-4" /> : <Calendar className="h-4 w-4" />}
           {isLearning ? '学习记录' : '个人日记'}
         </span>
-        <span className="text-xs text-zinc-400 flex items-center gap-1.5">
-          <Clock className="w-3 h-3" />
-          {format(post.createdAt, 'yyyy-MM-dd')}
-        </span>
-        {post.isDraft && <span className="text-xs font-medium text-amber-700 bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 px-2 py-1 rounded-full">草稿</span>}
+        <ArrowUpRight className="h-5 w-5 text-zinc-400 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-zinc-950 dark:group-hover:text-white" />
       </div>
-      
-      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-3 theme-hover-primary transition-colors">
-        {post.title}
-      </h3>
-      
-      <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed line-clamp-3">
-        {summary}
-      </p>
-      {post.tags.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2 text-xs text-zinc-500">
-          <Tag className="w-3.5 h-3.5 mt-0.5" />
-          {post.tags.slice(0, 3).map((tag) => <span key={tag}>#{tag}</span>)}
-        </div>
-      )}
+
+      <div className="flex flex-1 flex-col justify-center py-10">
+        <h3 className="text-3xl font-semibold leading-tight tracking-[-0.045em] text-zinc-950 transition dark:text-white">
+          {post.title}
+        </h3>
+        {summary && (
+          <p className="mt-5 line-clamp-3 text-[15px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+            {summary}
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 border-t border-black/[0.07] pt-5 text-xs font-medium text-zinc-400 dark:border-white/[0.09]">
+        <span className="flex items-center gap-1.5">
+          <Clock className="h-3.5 w-3.5" />
+          {format(post.createdAt, 'yyyy.MM.dd')}
+        </span>
+        {post.isDraft && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">草稿</span>}
+        {post.tags.slice(0, 2).map((tag) => <span key={tag}>#{tag}</span>)}
+      </div>
     </Link>
   );
 }
