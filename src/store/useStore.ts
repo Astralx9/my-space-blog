@@ -22,7 +22,12 @@ export interface Photo {
   storagePath?: string | null;
   createdAt: number;
   extractedColors?: { primary: string; secondary: string } | null;
+  takenAt?: string | null;
+  location?: string | null;
+  story?: string | null;
 }
+
+type PhotoMetadataInput = Pick<Photo, 'takenAt' | 'location' | 'story'>;
 
 export interface WeightRecord {
   id: string;
@@ -62,6 +67,7 @@ interface AppState {
   deletePost: (id: string) => Promise<void>;
   addPhoto: (photoData: { compressedImage: string; extractedColors?: { primary: string; secondary: string } | null }) => Promise<Photo>;
   setPhotoColors: (id: string, colors: { primary: string; secondary: string }) => Promise<void>;
+  updatePhotoMetadata: (id: string, metadata: PhotoMetadataInput) => Promise<void>;
   deletePhoto: (id: string) => Promise<void>;
   addWeight: (weight: number) => Promise<void>;
   deleteWeight: (id: string) => Promise<void>;
@@ -87,6 +93,7 @@ const normalizePost = (post: Partial<Post>): Post => ({
 const normalizePhoto = (photo: Photo & { storage_path?: string | null }): Photo => ({
   ...photo,
   storagePath: photo.storage_path ?? photo.storagePath ?? null,
+  takenAt: (photo as Photo & { taken_at?: string | null }).taken_at ?? photo.takenAt ?? null,
 });
 
 export const useStore = create<AppState>()(
@@ -191,6 +198,21 @@ export const useStore = create<AppState>()(
         }));
       },
 
+      updatePhotoMetadata: async (id, metadata) => {
+        const takenAt = metadata.takenAt || null;
+        const location = metadata.location?.trim() || null;
+        const story = metadata.story?.trim() || null;
+        const { error } = await supabase.from('photos').update({
+          taken_at: takenAt,
+          location,
+          story,
+        }).eq('id', id);
+        if (error) throw error;
+        set((state) => ({
+          photos: state.photos.map((photo) => photo.id === id ? { ...photo, takenAt, location, story } : photo),
+        }));
+      },
+
       deletePhoto: async (id) => {
         const photo = get().photos.find((item) => item.id === id);
         const { error } = await supabase.from('photos').delete().eq('id', id);
@@ -247,3 +269,4 @@ export const useStore = create<AppState>()(
     },
   ),
 );
+
