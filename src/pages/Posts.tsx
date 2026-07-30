@@ -1,88 +1,91 @@
-import { useState, useMemo } from 'react';
-import { useStore, Category } from '../store/useStore';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowUpRight, PenLine, Search } from 'lucide-react';
+import { useStore, type Category } from '../store/useStore';
 import PostCard from '../components/PostCard';
-import { Search } from 'lucide-react';
 
 export default function Posts() {
   const posts = useStore((state) => state.posts);
   const [filter, setFilter] = useState<'all' | Category>('all');
   const [search, setSearch] = useState('');
+  const draftCount = posts.filter((post) => post.isDraft).length;
 
   const filteredPosts = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
     return posts.filter((post) => {
-      const matchCategory = filter === 'all' || post.category === filter;
-      const normalizedSearch = search.toLowerCase();
-      const matchSearch = post.title.toLowerCase().includes(normalizedSearch) ||
-                          post.content.toLowerCase().includes(normalizedSearch) ||
-                          post.tags.some((tag) => tag.toLowerCase().includes(normalizedSearch));
-      return matchCategory && matchSearch;
+      const matchesCategory = filter === 'all' || post.category === filter;
+      const matchesSearch = !normalizedSearch
+        || post.title.toLowerCase().includes(normalizedSearch)
+        || post.content.toLowerCase().includes(normalizedSearch)
+        || post.tags.some((tag) => tag.toLowerCase().includes(normalizedSearch));
+      return matchesCategory && matchesSearch;
     });
   }, [posts, filter, search]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2">所有记录</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">总计 {posts.length} 篇文章，含 {posts.filter((post) => post.isDraft).length} 篇草稿</p>
+    <div className="page-enter space-y-14 md:space-y-20">
+      <header className="flex min-h-[42vh] flex-col justify-end text-white">
+        <p className="hero-text-shadow mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Journal</p>
+        <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
+          <div>
+            <h1 className="page-title hero-text-shadow">所有记录。</h1>
+            <p className="hero-text-shadow mt-6 max-w-2xl text-lg font-medium text-white/85 md:text-xl">
+              {posts.length} 篇文章，{draftCount} 篇仍在酝酿。把日常和学习，整理成可回看的时间。
+            </p>
+          </div>
+          <Link to="/editor" className="apple-button w-fit bg-white !text-zinc-950 !shadow-xl">
+            <PenLine className="h-4 w-4" />
+            写新记录
+          </Link>
         </div>
+      </header>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-            <input 
-              type="text" 
-              placeholder="搜索标题、正文或标签…"
+      <section className="apple-surface rounded-[2.5rem] p-5 sm:p-7">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <input
+              type="search"
+              placeholder="搜索标题、正文或标签"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full sm:w-64 pl-10 pr-4 py-2 bg-white/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 theme-focus transition-all text-sm"
+              onChange={(event) => setSearch(event.target.value)}
+              className="apple-input pl-11"
             />
           </div>
 
-          <div className="flex bg-zinc-100/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] backdrop-blur-sm p-1 rounded-xl">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                filter === 'all'
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-              }`}
-            >
-              全部
-            </button>
-            <button
-              onClick={() => setFilter('diary')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                filter === 'diary'
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-              }`}
-            >
-              日记
-            </button>
-            <button
-              onClick={() => setFilter('learning')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                filter === 'learning'
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-              }`}
-            >
-              学习
-            </button>
+          <div className="segmented-control w-fit">
+            {([
+              ['all', '全部'],
+              ['diary', '日记'],
+              ['learning', '学习'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                onClick={() => setFilter(value)}
+                className={`segmented-button ${filter === value ? 'segmented-button-active' : 'hover:text-zinc-900 dark:hover:text-white'}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <section>
         {filteredPosts.length > 0 ? (
-          filteredPosts.map((post) => <PostCard key={post.id} post={post} />)
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {filteredPosts.map((post) => <PostCard key={post.id} post={post} />)}
+          </div>
         ) : (
-          <div className="col-span-full py-20 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl">
-            <p className="text-zinc-500">没有找到匹配的记录。</p>
+          <div className="apple-surface flex min-h-80 flex-col items-center justify-center rounded-[2.5rem] p-10 text-center">
+            <p className="text-xl font-semibold">没有找到匹配的记录。</p>
+            <button onClick={() => { setSearch(''); setFilter('all'); }} className="mt-4 flex items-center gap-1 text-sm font-semibold text-zinc-500 hover:text-zinc-950 dark:hover:text-white">
+              清除筛选
+              <ArrowUpRight className="h-4 w-4" />
+            </button>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
