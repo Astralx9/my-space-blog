@@ -4,6 +4,7 @@ import { ImagePlus, Loader2, Palette, Trash2, UploadCloud } from 'lucide-react';
 import { format } from 'date-fns';
 import { compressImageInWorker } from '../lib/imageWorker';
 import { extractImageColors } from '../lib/extractImageColors';
+import { MediaUploadError } from '../lib/mediaStorage';
 import type { Photo } from '../store/useStore';
 
 type UploadStage = 'queued' | 'compressing' | 'uploading' | 'saving' | 'success' | 'error';
@@ -16,6 +17,24 @@ const stageLabel: Record<UploadStage, string> = {
   saving: '正在保存记录',
   success: '完成',
   error: '失败',
+};
+
+const uploadErrorMessage = (error: unknown) => {
+  if (!navigator.onLine) return '当前网络不可用，请恢复网络后重试';
+  if (error instanceof MediaUploadError) return error.message;
+
+  const details = error && typeof error === 'object'
+    ? error as { code?: string; status?: number }
+    : undefined;
+  if (details?.code === '42501' || details?.status === 403) return '当前账号没有上传或保存图片的权限，请重新登录后重试';
+  if (details?.status === 401) return '登录状态已失效，请重新登录后上传';
+  if (details?.status === 413) return '图片超过大小限制，请选择更小的图片';
+  if (details?.code === 'PGRST204') return '网站的数据结构尚未同步，请刷新页面后重试';
+
+  const message = error instanceof Error ? error.message : '';
+  if (message.includes('仅支持') || message.includes('压缩后') || message.includes('登录') || message.includes('图片文件已上传')) return message;
+  if (/failed to fetch|network|fetch/i.test(message)) return '无法连接图片服务，请检查网络或刷新页面后重试';
+  return '上传未完成，请刷新页面后重试；若仍失败，请联系管理员并附上上传时间';
 };
 
 const getImageColors = (file: File) => new Promise<{ primary: string; secondary: string } | null>((resolve) => {
@@ -82,7 +101,7 @@ export default function Gallery() {
         updateItem(item.id, { stage: 'success', progress: 100 });
         succeeded += 1;
       } catch (error) {
-        const message = error instanceof Error ? error.message : '上传失败，请重试';
+        const message = uploadErrorMessage(error);
         console.error(`Photo upload failed for ${file.name}:`, error);
         updateItem(item.id, { stage: 'error', progress: 100, message });
       }

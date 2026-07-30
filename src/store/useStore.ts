@@ -163,13 +163,21 @@ export const useStore = create<AppState>()(
           extractedColors: extractedColors || null,
           createdAt: Date.now(),
         };
+        // `storagePath` is a client-side property. The persisted column uses
+        // snake case, so it must not be spread into the PostgREST payload.
         const { error } = await supabase.from('photos').insert({
-          ...newPhoto,
-          storage_path: newPhoto.storagePath,
+          id: newPhoto.id,
+          url: newPhoto.url,
+          storage_path: uploaded.path,
+          extractedColors: newPhoto.extractedColors,
+          createdAt: newPhoto.createdAt,
+          user_id: uploaded.userId,
         });
         if (error) {
           await removeBlogImage(uploaded.path).catch(() => undefined);
-          throw error;
+          if (error.code === '42501') throw new Error('没有保存图片记录的权限，请重新登录后重试');
+          if (error.code === 'PGRST204') throw new Error('网站的数据结构尚未同步，请刷新页面后重试');
+          throw new Error('图片文件已上传但保存记录失败，系统已自动清理文件，请稍后重试');
         }
         set((state) => ({ photos: [newPhoto, ...state.photos] }));
         return newPhoto;
