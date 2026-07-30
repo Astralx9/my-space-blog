@@ -19,6 +19,9 @@ create table if not exists public.photos (
   url text not null,
   storage_path text,
   "extractedColors" jsonb,
+  taken_at timestamptz,
+  location text,
+  story text,
   "createdAt" bigint not null
 );
 
@@ -72,3 +75,4 @@ create policy "Users update their own blog media" on storage.objects for update 
   with check (bucket_id = 'blog-media' and (storage.foldername(name))[1] = (select auth.uid()::text));
 create policy "Users delete their own blog media" on storage.objects for delete to authenticated
   using (bucket_id = 'blog-media' and (storage.foldername(name))[1] = (select auth.uid()::text));
+
