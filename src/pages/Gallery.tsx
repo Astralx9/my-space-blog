@@ -132,25 +132,28 @@ export default function Gallery() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="page-enter space-y-14 md:space-y-20">
+      <header className="flex min-h-[42vh] flex-col justify-end text-white">
+        <p className="hero-text-shadow mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Photography</p>
+        <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2">摄影作品</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">总计 {photos.length} 张照片。这些照片将会随机显示在主页背景上。</p>
+          <h1 className="page-title hero-text-shadow">摄影作品。</h1>
+          <p className="hero-text-shadow mt-6 max-w-2xl text-lg font-medium text-white/85 md:text-xl">
+            {photos.length} 个被定格的瞬间。它们会成为整个空间的背景与色彩。
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="apple-button w-fit bg-white !text-zinc-950 !shadow-xl"
           >
             {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
             批量上传作品
           </button>
-        </div>
         <input type="file" ref={fileInputRef} onChange={(event) => uploadFiles(event.target.files || [])} accept="image/jpeg,image/png,image/webp" multiple className="hidden" />
-      </div>
+        </div>
+      </header>
 
       <div
         onDragOver={(event) => event.preventDefault()}
@@ -158,40 +161,40 @@ export default function Gallery() {
           event.preventDefault();
           void uploadFiles(event.dataTransfer.files);
         }}
-        className="rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 p-6 text-center text-sm text-zinc-500"
+        className="apple-surface rounded-[2rem] border-2 border-dashed !border-black/10 p-8 text-center text-sm text-zinc-500 transition hover:!border-black/25 dark:!border-white/15 dark:hover:!border-white/30"
       >
         <UploadCloud className="w-6 h-6 mx-auto mb-2 text-zinc-400" />
         可一次选择多张图片，或直接拖入此处。图片会逐张压缩、上传并显示进度。
       </div>
 
       {(queue.length > 0 || notice.kind !== 'idle') && (
-        <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3" aria-live="polite">
+        <section className="apple-surface space-y-4 rounded-[2rem] p-6" aria-live="polite">
           {queue.map((item) => (
             <div key={item.id} className="space-y-1.5">
               <div className="flex justify-between gap-4 text-sm">
                 <span className="truncate font-medium">{item.name}</span>
-                <span className={item.stage === 'error' ? 'text-red-600' : item.stage === 'success' ? 'theme-text-secondary' : 'text-zinc-500'}>{stageLabel[item.stage]}{item.message ? `：${item.message}` : ''}</span>
+                <span className={item.stage === 'error' ? 'text-red-600' : item.stage === 'success' ? 'text-emerald-600' : 'text-zinc-500'}>{stageLabel[item.stage]}{item.message ? `：${item.message}` : ''}</span>
               </div>
               <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-                <div className={`${item.stage === 'error' ? 'bg-red-500' : item.stage === 'success' ? 'theme-bg-secondary' : 'theme-bg-primary'} h-full transition-all duration-300`} style={{ width: `${item.progress}%` }} />
+                <div className={`${item.stage === 'error' ? 'bg-red-500' : item.stage === 'success' ? 'bg-emerald-500' : 'bg-blue-500'} h-full transition-all duration-300`} style={{ width: `${item.progress}%` }} />
               </div>
             </div>
           ))}
           {notice.kind !== 'idle' && (
-            <p role={notice.kind === 'error' ? 'alert' : 'status'} className={notice.kind === 'error' ? 'text-sm text-red-600' : 'text-sm theme-text-secondary'}>{notice.message}</p>
+            <p role={notice.kind === 'error' ? 'alert' : 'status'} className={notice.kind === 'error' ? 'text-sm text-red-600' : 'text-sm text-emerald-600'}>{notice.message}</p>
           )}
         </section>
       )}
 
       {photos.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid auto-rows-[14rem] grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {photos.map((photo) => (
-            <div key={photo.id} className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-zinc-100/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] backdrop-blur-sm shadow-sm border border-zinc-200 dark:border-zinc-800">
-              <img src={photo.url} alt="Photography work" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4">
+            <div key={photo.id} className="group relative overflow-hidden rounded-[2rem] bg-zinc-100 shadow-[0_18px_55px_rgb(0_0_0/0.16)] first:row-span-2 first:sm:col-span-2 dark:bg-zinc-900">
+              <img src={photo.url} alt="摄影作品" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.035]" />
+              <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/25 via-transparent to-black/65 p-5 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
                 <div className="flex justify-end">
-                  {!photo.extractedColors && <button onClick={() => backfillPhotoColors(photo)} className="mr-2 p-2 bg-white/20 theme-bg-primary-hover text-white rounded-full backdrop-blur-sm transition-colors" title="补齐图片配色"><Palette className="w-4 h-4" /></button>}
-                  <button onClick={() => { if (window.confirm('确定要删除这张照片吗？')) void deletePhoto(photo.id).catch(() => setNotice({ kind: 'error', message: '删除失败，请重试' })); }} className="p-2 bg-white/20 hover:bg-red-500 text-white rounded-full backdrop-blur-sm transition-colors" title="删除图片"><Trash2 className="w-4 h-4" /></button>
+                  {!photo.extractedColors && <button onClick={() => backfillPhotoColors(photo)} className="mr-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-md transition-colors hover:bg-blue-500" title="补齐图片配色"><Palette className="w-4 h-4" /></button>}
+                  <button onClick={() => { if (window.confirm('确定要删除这张照片吗？')) void deletePhoto(photo.id).catch(() => setNotice({ kind: 'error', message: '删除失败，请重试' })); }} className="flex h-11 w-11 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-md transition-colors hover:bg-red-500" title="删除图片"><Trash2 className="w-4 h-4" /></button>
                 </div>
                 <div className="text-white text-xs font-medium drop-shadow-md">上传于 {format(photo.createdAt, 'yyyy-MM-dd')}</div>
               </div>
@@ -199,7 +202,7 @@ export default function Gallery() {
           ))}
         </div>
       ) : (
-        <div className="py-24 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl flex flex-col items-center justify-center">
+        <div className="apple-surface flex min-h-96 flex-col items-center justify-center rounded-[2.5rem] p-12 text-center">
           <ImagePlus className="w-8 h-8 text-zinc-400 mb-4" />
           <h3 className="text-lg font-bold mb-2">还没有摄影作品</h3>
           <p className="text-zinc-500 max-w-sm">选择一张或多张作品开始上传。</p>
