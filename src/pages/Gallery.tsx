@@ -257,13 +257,13 @@ export default function Gallery() {
       )}
 
       {selectedPhoto && (
-        <div className="fixed inset-0 z-[70] flex items-stretch bg-black/80 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-label="摄影作品详情" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedPhoto(null); }}>
-          <div className="relative mx-auto flex h-full w-full max-w-7xl overflow-hidden rounded-[2rem] border border-white/15 bg-zinc-950 shadow-[0_32px_100px_rgb(0_0_0/0.48)] lg:grid lg:grid-cols-[minmax(0,1.65fr)_minmax(22rem,0.75fr)]">
+        <div className="fixed inset-0 z-[70] flex items-stretch p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="摄影作品详情" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedPhoto(null); }}>
+          <div className="relative mx-auto flex h-full w-full max-w-7xl overflow-hidden rounded-[2rem] border border-white/20 bg-white/[var(--surface-alpha)] shadow-[0_32px_100px_rgb(0_0_0/0.48)] backdrop-blur-2xl dark:bg-zinc-950/[var(--surface-alpha)] lg:grid lg:grid-cols-[minmax(0,1.65fr)_minmax(22rem,0.75fr)]">
             <button type="button" onClick={() => setSelectedPhoto(null)} className="absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition hover:bg-white hover:text-zinc-950" aria-label="关闭大图查看"><X className="h-5 w-5" /></button>
-            <div className="flex min-h-0 items-center justify-center bg-black p-4 sm:p-8">
+            <div className="flex min-h-0 items-center justify-center bg-black/[var(--surface-alpha)] p-4 sm:p-8">
               <img src={selectedPhoto.url} alt="摄影作品大图" className="max-h-full max-w-full rounded-xl object-contain shadow-2xl" />
             </div>
-            <form onSubmit={saveMetadata} className="flex min-h-0 flex-col overflow-y-auto bg-white p-6 text-zinc-950 dark:bg-zinc-950 dark:text-white sm:p-8">
+            <form onSubmit={saveMetadata} className="flex min-h-0 flex-col overflow-y-auto bg-white/[var(--surface-alpha)] p-6 text-zinc-950 backdrop-blur-2xl dark:bg-zinc-950/[var(--surface-alpha)] dark:text-white sm:p-8">
               <p className="eyebrow mb-3">Photo note</p>
               <h2 className="text-3xl font-semibold tracking-[-0.05em]">把这一刻留下来。</h2>
               <p className="mt-3 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">记录拍摄时的光线、地点与当下心情；这些信息只会写入你的作品记录。</p>
