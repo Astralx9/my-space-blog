@@ -50,6 +50,7 @@ export default function Home() {
     // the image, apply it immediately, then persist it for future visits.
     let active = true;
     const image = new Image();
+    image.crossOrigin = 'anonymous';
     image.onload = () => {
       try {
         const colors = extractImageColors(image);
