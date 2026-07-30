@@ -30,7 +30,7 @@ export default function WeightTracker() {
   const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : null;
 
   return (
-    <div className="apple-surface flex h-full min-h-[34rem] flex-col rounded-[2.5rem] p-7 sm:p-10">
+    <div className="apple-surface apple-surface-interactive flex min-h-[38rem] flex-col rounded-[2.5rem] p-7 sm:p-10">
       <div className="mb-8 flex items-start justify-between gap-4">
         <h2 className="flex items-center gap-3 text-2xl font-semibold tracking-[-0.035em]">
           <Scale className="w-6 h-6" style={{ color: extractedColors?.primary || '#3b82f6' }} />
