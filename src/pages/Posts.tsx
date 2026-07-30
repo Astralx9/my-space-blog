@@ -11,8 +11,10 @@ export default function Posts() {
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
       const matchCategory = filter === 'all' || post.category === filter;
-      const matchSearch = post.title.toLowerCase().includes(search.toLowerCase()) || 
-                          post.content.toLowerCase().includes(search.toLowerCase());
+      const normalizedSearch = search.toLowerCase();
+      const matchSearch = post.title.toLowerCase().includes(normalizedSearch) ||
+                          post.content.toLowerCase().includes(normalizedSearch) ||
+                          post.tags.some((tag) => tag.toLowerCase().includes(normalizedSearch));
       return matchCategory && matchSearch;
     });
   }, [posts, filter, search]);
@@ -22,7 +24,7 @@ export default function Posts() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight mb-2">所有记录</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">总计 {posts.length} 篇文章</p>
+          <p className="text-zinc-500 dark:text-zinc-400">总计 {posts.length} 篇文章，含 {posts.filter((post) => post.isDraft).length} 篇草稿</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -30,7 +32,7 @@ export default function Posts() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input 
               type="text" 
-              placeholder="搜索..."
+              placeholder="搜索标题、正文或标签…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full sm:w-64 pl-10 pr-4 py-2 bg-white/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] backdrop-blur-sm border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"

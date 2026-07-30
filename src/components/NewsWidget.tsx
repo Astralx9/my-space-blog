@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Rss, ExternalLink, Loader2 } from 'lucide-react';
+import { Globe, ExternalLink, Loader2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
 
@@ -10,11 +10,7 @@ interface NewsItem {
   source: string;
 }
 
-const NEWS_SOURCES = [
-  { name: '科技(CN)', url: 'https://www.solidot.org/index.rss', type: 'tech' },
-  { name: 'Hacker News', url: 'https://hnrss.org/frontpage', type: 'tech' },
-  { name: '财经(CN)', url: 'https://rsshub.app/sina/finance/roll', type: 'finance' }, // Assuming a public proxy or fallback
-];
+type RssResponse = { status?: string; items?: Array<Pick<NewsItem, 'title' | 'link' | 'pubDate'>> };
 
 // We will use rss2json public API for easy parsing in browser without dealing with XML/CORS directly
 const RSS2JSON_API = 'https://api.rss2json.com/v1/api.json?rss_url=';
@@ -75,10 +71,10 @@ export default function NewsWidget() {
           try {
             const res = await fetch(`${RSS2JSON_API}${encodeURIComponent(feed.url)}`);
             if (!res.ok) continue;
-            const data = await res.json();
+            const data = await res.json() as RssResponse;
             if (data.status === 'ok' && data.items && data.items.length > 0) {
               // Increase from 5 to 10 per feed to ensure we have enough items
-              const items = data.items.slice(0, 10).map((item: any) => ({
+            const items = data.items.slice(0, 10).map((item) => ({
                 title: item.title,
                 link: item.link,
                 pubDate: item.pubDate,
@@ -87,7 +83,7 @@ export default function NewsWidget() {
               allNews.push(...items);
               successfulFeeds++;
             }
-          } catch (e) {
+          } catch {
             console.warn(`Failed to fetch feed ${feed.name}`);
           }
         }

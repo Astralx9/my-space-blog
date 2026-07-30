@@ -1,68 +1,74 @@
--- 这是一个完整的初始化脚本。如果您之前没有成功建表，请直接运行这个脚本。
+-- Fresh-install schema for My Space.
+-- Existing projects must use supabase/migrations/20260726190000_secure_content_and_media.sql instead.
 
--- 1. 创建文章表
-create table if not exists posts (
+create table if not exists public.posts (
   id uuid primary key,
+  user_id uuid not null default auth.uid() references auth.users(id),
   title text not null,
   content text not null,
-  category text not null,
-  "createdAt" bigint not null
+  category text not null check (category in ('diary', 'learning')),
+  tags text[] not null default '{}',
+  "isDraft" boolean not null default false,
+  "createdAt" bigint not null,
+  "updatedAt" bigint not null
 );
 
--- 2. 创建照片表
-create table if not exists photos (
+create table if not exists public.photos (
   id uuid primary key,
+  user_id uuid not null default auth.uid() references auth.users(id),
   url text not null,
+  storage_path text,
   "extractedColors" jsonb,
   "createdAt" bigint not null
 );
 
--- 3. 创建体重记录表
-create table if not exists weights (
+create table if not exists public.weights (
   id uuid primary key,
+  user_id uuid not null default auth.uid() references auth.users(id),
   weight numeric not null,
   date bigint not null
 );
 
--- 4. 创建 TODO 列表表
-create table if not exists todos (
+create table if not exists public.todos (
   id uuid primary key,
+  user_id uuid not null default auth.uid() references auth.users(id),
   title text not null,
   description text not null,
-  completed boolean default false,
-  steps jsonb default '[]'::jsonb,
+  completed boolean not null default false,
+  steps jsonb not null default '[]'::jsonb,
   "createdAt" bigint not null
 );
 
--- 5. 开启所有表的行级安全策略 (Row Level Security)
-alter table posts enable row level security;
-alter table photos enable row level security;
-alter table weights enable row level security;
-alter table todos enable row level security;
+create index if not exists posts_user_created_idx on public.posts (user_id, "createdAt" desc);
+create index if not exists posts_tags_idx on public.posts using gin (tags);
+create index if not exists photos_user_created_idx on public.photos (user_id, "createdAt" desc);
+create index if not exists weights_user_date_idx on public.weights (user_id, date);
+create index if not exists todos_user_created_idx on public.todos (user_id, "createdAt" desc);
 
--- 6. 删除可能存在的旧安全策略（以防冲突）
-drop policy if exists "Allow public read access on posts" on posts;
-drop policy if exists "Allow public read access on photos" on photos;
-drop policy if exists "Allow public read access on weights" on weights;
-drop policy if exists "Allow public read access on todos" on todos;
-drop policy if exists "Allow auth users to modify posts" on posts;
-drop policy if exists "Allow auth users to modify photos" on photos;
-drop policy if exists "Allow auth users to modify weights" on weights;
-drop policy if exists "Allow auth users to modify todos" on todos;
-drop policy if exists "Allow public to modify posts" on posts;
-drop policy if exists "Allow public to modify photos" on photos;
-drop policy if exists "Allow public to modify weights" on weights;
-drop policy if exists "Allow public to modify todos" on todos;
+alter table public.posts enable row level security;
+alter table public.photos enable row level security;
+alter table public.weights enable row level security;
+alter table public.todos enable row level security;
 
--- 7. 创建全新的安全策略：允许任何人读取数据（浏览博客）
-create policy "Allow public read access on posts" on posts for select using (true);
-create policy "Allow public read access on photos" on photos for select using (true);
-create policy "Allow public read access on weights" on weights for select using (true);
-create policy "Allow public read access on todos" on todos for select using (true);
+create policy "Users manage their own posts" on public.posts for all to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "Users manage their own photos" on public.photos for all to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "Users manage their own weights" on public.weights for all to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "Users manage their own todos" on public.todos for all to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
--- 8. 创建全新的安全策略：允许任何人写入/修改数据
--- （由于我们在前端已经加上了 "hph" 密码拦截，所以这里向前端代码放行所有操作）
-create policy "Allow public to modify posts" on posts for all using (true) with check (true);
-create policy "Allow public to modify photos" on photos for all using (true) with check (true);
-create policy "Allow public to modify weights" on weights for all using (true) with check (true);
-create policy "Allow public to modify todos" on todos for all using (true) with check (true);
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('blog-media', 'blog-media', true, 6291456, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "Users read their own blog media" on storage.objects for select to authenticated
+  using (bucket_id = 'blog-media' and (storage.foldername(name))[1] = (select auth.uid()::text));
+create policy "Users upload their own blog media" on storage.objects for insert to authenticated
+  with check (bucket_id = 'blog-media' and (storage.foldername(name))[1] = (select auth.uid()::text));
+create policy "Users update their own blog media" on storage.objects for update to authenticated
+  using (bucket_id = 'blog-media' and (storage.foldername(name))[1] = (select auth.uid()::text))
+  with check (bucket_id = 'blog-media' and (storage.foldername(name))[1] = (select auth.uid()::text));
+create policy "Users delete their own blog media" on storage.objects for delete to authenticated
+  using (bucket_id = 'blog-media' and (storage.foldername(name))[1] = (select auth.uid()::text));

@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from "vite-tsconfig-paths";
 import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -16,6 +17,25 @@ export default defineConfig({
     sourcemap: 'hidden',
   },
   plugins: [
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['pwa-icon.svg'],
+      manifest: {
+        name: 'My Space',
+        short_name: 'My Space',
+        description: 'Astral 的个人记录与摄影作品空间',
+        theme_color: '#18181b',
+        background_color: '#18181b',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: '/pwa-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+      },
+    }),
     react({
       babel: {
         plugins: [

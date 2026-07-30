@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useStore, TodoStep } from '../store/useStore';
-import { Plus, CheckCircle2, Circle, Trash2, Edit2, GripVertical, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Trash2, GripVertical, ChevronDown, ChevronRight, X } from 'lucide-react';
 
 export default function Todo() {
   const todos = useStore((state) => state.todos);
   const addTodo = useStore((state) => state.addTodo);
   const updateTodo = useStore((state) => state.updateTodo);
   const deleteTodo = useStore((state) => state.deleteTodo);
-  const checkPassword = useStore((state) => state.checkPassword);
   
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -17,7 +16,6 @@ export default function Todo() {
 
   const handleAddTodo = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!checkPassword()) return;
     if (!newTitle.trim()) return;
     
     addTodo({
@@ -32,7 +30,6 @@ export default function Todo() {
 
   const handleAddStep = (e: React.FormEvent, todoId: string, currentSteps: TodoStep[]) => {
     e.preventDefault();
-    if (!checkPassword()) return;
     if (!stepInput.trim()) return;
     
     updateTodo(todoId, {
@@ -42,18 +39,15 @@ export default function Todo() {
   };
 
   const toggleTodoComplete = (id: string, currentStatus: boolean) => {
-    if (!checkPassword()) return;
     updateTodo(id, { completed: !currentStatus });
   };
 
   const toggleStepComplete = (todoId: string, steps: TodoStep[], stepId: string) => {
-    if (!checkPassword()) return;
     const updatedSteps = steps.map(s => s.id === stepId ? { ...s, completed: !s.completed } : s);
     updateTodo(todoId, { steps: updatedSteps });
   };
 
   const deleteStep = (todoId: string, steps: TodoStep[], stepId: string) => {
-    if (!checkPassword()) return;
     updateTodo(todoId, { steps: steps.filter(s => s.id !== stepId) });
   };
 
@@ -142,9 +136,8 @@ export default function Todo() {
                     </button>
                     <button
                       onClick={() => {
-                        if (!checkPassword()) return;
                         if (window.confirm('确定要删除这个任务吗？')) {
-                          deleteTodo(todo.id);
+                          void deleteTodo(todo.id).catch((error) => console.error('Failed to delete todo:', error));
                         }
                       }}
                       className="p-2 text-red-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 rounded-lg transition-colors"

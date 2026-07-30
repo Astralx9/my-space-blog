@@ -1,57 +1,49 @@
-# React + TypeScript + Vite
+# My Space
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一个基于 React、Vite 和 Supabase 的个人记录空间，包含文章、摄影作品、Todo、体重记录与轻量 PWA 支持。
 
-Currently, two official plugins are available:
+## 本地运行
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+在 `.env.local` 中配置：
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  extends: [
-    // other configs...
-    // Enable lint rules for React
-    reactX.configs['recommended-typescript'],
-    // Enable lint rules for React DOM
-    reactDom.configs.recommended,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```env
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-publishable-or-anon-key
 ```
+
+不要把 `service_role` 或任何私钥放进 Vite 环境变量。
+
+## 首次创建 Supabase 数据库
+
+在 Supabase SQL Editor 执行 `supabase_setup.sql`。它会创建数据表、按登录用户隔离的 RLS 策略，以及公共读取、仅本人写入的 `blog-media` 图片桶。
+
+## 已有项目升级
+
+已部署过旧版本时，请先在 Supabase SQL Editor 执行：
+
+`supabase/migrations/20260726190000_secure_content_and_media.sql`
+
+该迁移会：
+
+- 将旧内容归属到项目中最早创建的认证账号；
+- 移除匿名全写入策略，改为 `auth.uid()` 所有权策略；
+- 添加文章标签、草稿、更新时间和图片 Storage 路径；
+- 创建 `blog-media` Storage bucket 和其对象策略。
+
+执行迁移后，以该账号登录网站，确认历史文章和图片存在，再部署新版前端。
+
+## 验证命令
+
+```bash
+npm run lint
+npm run check
+npm run build
+```
+
+生产构建会生成 `manifest.webmanifest` 和 Service Worker；支持安装为轻量 PWA，并缓存应用外壳以改善弱网下的启动体验。

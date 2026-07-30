@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase } from '../lib/supabase';
+import { dataUrlToBlob, removeBlogImage, uploadBlogImage } from '../lib/mediaStorage';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 export type Category = 'diary' | 'learning';
 
@@ -9,12 +10,16 @@ export interface Post {
   title: string;
   content: string;
   category: Category;
+  tags: string[];
+  isDraft: boolean;
   createdAt: number;
+  updatedAt: number;
 }
 
 export interface Photo {
   id: string;
   url: string;
+  storagePath?: string | null;
   createdAt: number;
   extractedColors?: { primary: string; secondary: string } | null;
 }
@@ -22,7 +27,7 @@ export interface Photo {
 export interface WeightRecord {
   id: string;
   weight: number;
-  date: number; // timestamp
+  date: number;
 }
 
 export interface TodoStep {
@@ -40,6 +45,8 @@ export interface TodoItem {
   createdAt: number;
 }
 
+type PostInput = Pick<Post, 'title' | 'content' | 'category' | 'tags' | 'isDraft'>;
+
 interface AppState {
   posts: Post[];
   photos: Photo[];
@@ -48,26 +55,39 @@ interface AppState {
   sidebarCollapsed: boolean;
   componentOpacity: number;
   extractedColors: { primary: string; secondary: string } | null;
-  isUnlocked: boolean;
   isInitialized: boolean;
-  
   fetchData: () => Promise<void>;
-  checkPassword: () => boolean;
-  
-  addPost: (post: Omit<Post, 'id' | 'createdAt'>) => Promise<void>;
+  addPost: (post: PostInput) => Promise<Post>;
+  updatePost: (id: string, post: PostInput) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
-  addPhoto: (photoData: { url: string, extractedColors?: { primary: string; secondary: string } | null }) => Promise<void>;
+  addPhoto: (photoData: { compressedImage: string; extractedColors?: { primary: string; secondary: string } | null }) => Promise<Photo>;
+  setPhotoColors: (id: string, colors: { primary: string; secondary: string }) => Promise<void>;
   deletePhoto: (id: string) => Promise<void>;
   addWeight: (weight: number) => Promise<void>;
   deleteWeight: (id: string) => Promise<void>;
   addTodo: (todo: Omit<TodoItem, 'id' | 'createdAt' | 'completed'>) => Promise<void>;
   updateTodo: (id: string, todo: Partial<TodoItem>) => Promise<void>;
   deleteTodo: (id: string) => Promise<void>;
-  
   setSidebarCollapsed: (collapsed: boolean) => void;
   setComponentOpacity: (opacity: number) => void;
   setExtractedColors: (colors: { primary: string; secondary: string } | null) => void;
 }
+
+const normalizePost = (post: Partial<Post>): Post => ({
+  id: post.id!,
+  title: post.title || '',
+  content: post.content || '',
+  category: post.category || 'diary',
+  tags: post.tags || [],
+  isDraft: post.isDraft || false,
+  createdAt: post.createdAt || Date.now(),
+  updatedAt: post.updatedAt || post.createdAt || Date.now(),
+});
+
+const normalizePhoto = (photo: Photo & { storage_path?: string | null }): Photo => ({
+  ...photo,
+  storagePath: photo.storage_path ?? photo.storagePath ?? null,
+});
 
 export const useStore = create<AppState>()(
   persist(
@@ -80,131 +100,129 @@ export const useStore = create<AppState>()(
       sidebarCollapsed: false,
       componentOpacity: 90,
       extractedColors: null,
-      isUnlocked: false,
-
-      checkPassword: () => {
-        if (get().isUnlocked) return true;
-        const pwd = window.prompt('请输入博主密码以执行此操作：');
-        if (pwd === 'hph') {
-          set({ isUnlocked: true });
-          return true;
-        }
-        if (pwd !== null) {
-          alert('密码错误');
-        }
-        return false;
-      },
 
       fetchData: async () => {
+        if (!isSupabaseConfigured) {
+          set({ isInitialized: true });
+          return;
+        }
+
         try {
           const [postsRes, photosRes, weightsRes, todosRes] = await Promise.all([
             supabase.from('posts').select('*').order('createdAt', { ascending: false }),
             supabase.from('photos').select('*').order('createdAt', { ascending: false }),
             supabase.from('weights').select('*').order('date', { ascending: true }),
-            supabase.from('todos').select('*').order('createdAt', { ascending: false })
+            supabase.from('todos').select('*').order('createdAt', { ascending: false }),
           ]);
+          const error = postsRes.error || photosRes.error || weightsRes.error || todosRes.error;
+          if (error) throw error;
 
           set({
-            posts: postsRes.data || [],
-            photos: photosRes.data || [],
+            posts: (postsRes.data || []).map(normalizePost),
+            photos: (photosRes.data || []).map(normalizePhoto),
             weights: weightsRes.data || [],
             todos: todosRes.data || [],
-            isInitialized: true
+            isInitialized: true,
           });
         } catch (error) {
-          console.error("Error fetching data from Supabase", error);
+          console.error('Error fetching data from Supabase', error);
+          set({ isInitialized: true });
         }
       },
 
       addPost: async (postData) => {
-        const newPost: Post = {
-          ...postData,
-          id: crypto.randomUUID(),
-          createdAt: Date.now(),
-        };
+        const now = Date.now();
+        const newPost: Post = { ...postData, id: crypto.randomUUID(), createdAt: now, updatedAt: now };
         const { error } = await supabase.from('posts').insert(newPost);
-        if (!error) {
-          set((state) => ({ posts: [newPost, ...state.posts] }));
-        } else throw error;
+        if (error) throw error;
+        set((state) => ({ posts: [newPost, ...state.posts] }));
+        return newPost;
+      },
+
+      updatePost: async (id, postData) => {
+        const updatedAt = Date.now();
+        const { error } = await supabase.from('posts').update({ ...postData, updatedAt }).eq('id', id);
+        if (error) throw error;
+        set((state) => ({
+          posts: state.posts.map((post) => post.id === id ? { ...post, ...postData, updatedAt } : post),
+        }));
       },
 
       deletePost: async (id) => {
         const { error } = await supabase.from('posts').delete().eq('id', id);
-        if (!error) {
-          set((state) => ({ posts: state.posts.filter((post) => post.id !== id) }));
-        } else throw error;
+        if (error) throw error;
+        set((state) => ({ posts: state.posts.filter((post) => post.id !== id) }));
       },
 
-      addPhoto: async (photoData) => {
+      addPhoto: async ({ compressedImage, extractedColors }) => {
+        const uploaded = await uploadBlogImage(await dataUrlToBlob(compressedImage), 'gallery');
         const newPhoto: Photo = {
           id: crypto.randomUUID(),
-          url: photoData.url,
-          extractedColors: photoData.extractedColors || null,
+          url: uploaded.url,
+          storagePath: uploaded.path,
+          extractedColors: extractedColors || null,
           createdAt: Date.now(),
         };
-        const { error } = await supabase.from('photos').insert(newPhoto);
-        if (!error) {
-          set((state) => ({ photos: [newPhoto, ...state.photos] }));
-        } else throw error;
+        const { error } = await supabase.from('photos').insert({
+          ...newPhoto,
+          storage_path: newPhoto.storagePath,
+        });
+        if (error) {
+          await removeBlogImage(uploaded.path).catch(() => undefined);
+          throw error;
+        }
+        set((state) => ({ photos: [newPhoto, ...state.photos] }));
+        return newPhoto;
+      },
+
+      setPhotoColors: async (id, colors) => {
+        const { error } = await supabase.from('photos').update({ extractedColors: colors }).eq('id', id);
+        if (error) throw error;
+        set((state) => ({
+          photos: state.photos.map((photo) => photo.id === id ? { ...photo, extractedColors: colors } : photo),
+        }));
       },
 
       deletePhoto: async (id) => {
+        const photo = get().photos.find((item) => item.id === id);
         const { error } = await supabase.from('photos').delete().eq('id', id);
-        if (!error) {
-          set((state) => ({ photos: state.photos.filter((photo) => photo.id !== id) }));
-        } else throw error;
+        if (error) throw error;
+        set((state) => ({ photos: state.photos.filter((photoItem) => photoItem.id !== id) }));
+        await removeBlogImage(photo?.storagePath).catch((storageError) => {
+          console.error('Photo record was deleted, but Storage cleanup failed:', storageError);
+        });
       },
 
       addWeight: async (weight) => {
-        const newWeight: WeightRecord = {
-          id: crypto.randomUUID(),
-          weight,
-          date: Date.now(),
-        };
+        const newWeight: WeightRecord = { id: crypto.randomUUID(), weight, date: Date.now() };
         const { error } = await supabase.from('weights').insert(newWeight);
-        if (!error) {
-          set((state) => ({ 
-            weights: [...state.weights, newWeight].sort((a, b) => a.date - b.date) 
-          }));
-        } else throw error;
+        if (error) throw error;
+        set((state) => ({ weights: [...state.weights, newWeight].sort((a, b) => a.date - b.date) }));
       },
 
       deleteWeight: async (id) => {
         const { error } = await supabase.from('weights').delete().eq('id', id);
-        if (!error) {
-          set((state) => ({ weights: state.weights.filter((w) => w.id !== id) }));
-        } else throw error;
+        if (error) throw error;
+        set((state) => ({ weights: state.weights.filter((weight) => weight.id !== id) }));
       },
 
       addTodo: async (todo) => {
-        const newTodo: TodoItem = {
-          ...todo,
-          id: crypto.randomUUID(),
-          completed: false,
-          createdAt: Date.now(),
-        };
+        const newTodo: TodoItem = { ...todo, id: crypto.randomUUID(), completed: false, createdAt: Date.now() };
         const { error } = await supabase.from('todos').insert(newTodo);
-        if (!error) {
-          set((state) => ({ todos: [newTodo, ...state.todos] }));
-        } else throw error;
+        if (error) throw error;
+        set((state) => ({ todos: [newTodo, ...state.todos] }));
       },
 
       updateTodo: async (id, updatedTodo) => {
         const { error } = await supabase.from('todos').update(updatedTodo).eq('id', id);
-        if (!error) {
-          set((state) => ({
-            todos: state.todos.map((todo) => 
-              todo.id === id ? { ...todo, ...updatedTodo } : todo
-            ),
-          }));
-        } else throw error;
+        if (error) throw error;
+        set((state) => ({ todos: state.todos.map((todo) => todo.id === id ? { ...todo, ...updatedTodo } : todo) }));
       },
 
       deleteTodo: async (id) => {
         const { error } = await supabase.from('todos').delete().eq('id', id);
-        if (!error) {
-          set((state) => ({ todos: state.todos.filter((todo) => todo.id !== id) }));
-        } else throw error;
+        if (error) throw error;
+        set((state) => ({ todos: state.todos.filter((todo) => todo.id !== id) }));
       },
 
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
@@ -213,12 +231,11 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'blog-ui-storage',
-      // ONLY persist UI state. Data comes from Supabase!
       partialize: (state) => ({
         sidebarCollapsed: state.sidebarCollapsed,
         componentOpacity: state.componentOpacity,
         extractedColors: state.extractedColors,
       }),
-    }
-  )
+    },
+  ),
 );

@@ -79,13 +79,12 @@ export default function Sidebar() {
                 title={isCollapsed ? item.label : undefined}
                 className={`flex items-center gap-3 ${isCollapsed ? 'justify-center px-0' : 'px-4'} py-3 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? 'bg-zinc-100 dark:bg-zinc-800/50 text-zinc-900 dark:text-white font-medium'
+                    ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-100 font-medium'
                     : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <Icon 
                   className={`w-5 h-5 shrink-0`} 
-                  style={isActive ? { color: extractedColors?.primary || '#2563eb' } : {}}
                 />
                 {!isCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
               </Link>

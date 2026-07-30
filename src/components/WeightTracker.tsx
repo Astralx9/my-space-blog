@@ -2,14 +2,12 @@ import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Scale, Plus, Trash2 } from 'lucide-react';
+import { Scale, Plus } from 'lucide-react';
 
 export default function WeightTracker() {
   const weights = useStore((state) => state.weights);
   const addWeight = useStore((state) => state.addWeight);
-  const deleteWeight = useStore((state) => state.deleteWeight);
   const extractedColors = useStore((state) => state.extractedColors);
-  const checkPassword = useStore((state) => state.checkPassword);
   
   const [newWeight, setNewWeight] = useState('');
 
@@ -22,18 +20,10 @@ export default function WeightTracker() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!checkPassword()) return;
     const w = parseFloat(newWeight);
     if (!isNaN(w) && w > 0 && w < 300) {
       addWeight(w);
       setNewWeight('');
-    }
-  };
-
-  const handleDelete = (id: string) => {
-    if (!checkPassword()) return;
-    if (confirm('确定要删除这条记录吗？')) {
-      deleteWeight(id);
     }
   };
 
