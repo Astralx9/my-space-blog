@@ -35,7 +35,7 @@ export default function WeightTracker() {
     event.preventDefault();
     const value = Number.parseFloat(newWeight);
     if (!Number.isFinite(value) || value <= 0 || value >= 300) {
-      setFormError('璇疯緭鍏?0 鍒?300 涔嬮棿鐨勪綋閲嶆暟鍊笺€?);
+      setFormError('请输入 0 到 300 之间的体重数值。');
       return;
     }
 
@@ -46,7 +46,7 @@ export default function WeightTracker() {
       setNewWeight('');
     } catch (error) {
       console.error('Failed to save weight:', error);
-      setFormError('璁板綍鏈繚瀛樻垚鍔燂紝璇锋鏌ョ綉缁滃悗閲嶈瘯銆?);
+      setFormError('记录未保存成功，请检查网络后重试。');
     } finally {
       setIsSaving(false);
     }
@@ -59,11 +59,12 @@ export default function WeightTracker() {
           <p className="eyebrow mb-3">Body metrics</p>
           <h2 className="flex items-center gap-3 text-2xl font-semibold tracking-[-0.035em]">
             <Scale className="h-6 w-6" style={{ color: themeColor }} />
-            浣撻噸璁板綍鍣?          </h2>
+            体重记录器
+          </h2>
         </div>
         {latestWeight !== null && (
           <div className="rounded-2xl border border-black/[0.06] bg-white/55 px-4 py-3 text-right shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.05]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">鏈€鏂拌褰?/p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">最新记录</p>
             <p className="mt-1 text-3xl font-semibold tracking-[-0.055em] text-zinc-950 dark:text-white">{latestWeight.toFixed(1)}<span className="ml-1 text-sm font-medium text-zinc-500">kg</span></p>
           </div>
         )}
@@ -72,13 +73,13 @@ export default function WeightTracker() {
       <section className="relative mt-8 flex-1 overflow-hidden rounded-[2rem] border border-black/[0.06] bg-gradient-to-br from-white/85 via-white/60 to-[rgb(var(--theme-primary)/0.10)] p-5 shadow-inner dark:border-white/10 dark:from-white/[0.08] dark:via-white/[0.03] dark:to-[rgb(var(--theme-primary)/0.16)] sm:p-7">
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">鍙樺寲瓒嬪娍</p>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{chartData.length > 1 ? `浠?${format(new Date(weights[0].date), 'M鏈坉鏃?)} 寮€濮嬬殑鐪熷疄璁板綍` : '璁板綍浼氬湪杩欓噷鑷劧寤跺睍'}</p>
+            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">变化趋势</p>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{chartData.length > 1 ? `从 ${format(new Date(weights[0].date), 'M月d日')} 开始的真实记录` : '记录会在这里自然延展'}</p>
           </div>
           {change !== null && (
             <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-2 text-sm font-semibold shadow-sm dark:bg-black/15" style={{ color: themeColor }}>
               {change < 0 ? <TrendingDown className="h-4 w-4" /> : change > 0 ? <TrendingUp className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-              {change === 0 ? '淇濇寔涓嶅彉' : `${change > 0 ? '+' : ''}${change.toFixed(1)} kg`}
+              {change === 0 ? '保持不变' : `${change > 0 ? '+' : ''}${change.toFixed(1)} kg`}
             </div>
           )}
         </div>
@@ -99,7 +100,7 @@ export default function WeightTracker() {
                   cursor={{ stroke: themeColor, strokeOpacity: 0.25, strokeDasharray: '4 5' }}
                   contentStyle={{ borderRadius: '16px', border: '1px solid rgb(0 0 0 / 0.08)', boxShadow: '0 16px 36px rgb(0 0 0 / 0.14)', background: 'rgb(255 255 255 / 0.92)', padding: '10px 12px' }}
                   labelStyle={{ color: '#71717a', fontSize: 12, marginBottom: 3 }}
-                  formatter={(value: number) => [`${Number(value).toFixed(1)} kg`, '浣撻噸']}
+                  formatter={(value: number) => [`${Number(value).toFixed(1)} kg`, '体重']}
                 />
                 <Area type="monotone" dataKey="weight" stroke={themeColor} strokeWidth={3} fill="url(#weight-trend-fill)" dot={{ r: 4, fill: themeColor, stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6, fill: themeColor, stroke: '#fff', strokeWidth: 3 }} />
               </AreaChart>
@@ -113,24 +114,24 @@ export default function WeightTracker() {
               </svg>
               <div className="relative z-10 -mt-8">
                 <p className="text-4xl font-semibold tracking-[-0.06em] text-zinc-950 dark:text-white">{latestWeight?.toFixed(1)}<span className="ml-1 text-base font-medium text-zinc-500">kg</span></p>
-                <p className="mt-3 text-sm text-zinc-500">杩欐槸绗竴绗旇褰曪紱鍐嶆墦鍗′竴娆★紝灏变細鐢熸垚鐪熷疄瓒嬪娍銆?/p>
+                <p className="mt-3 text-sm text-zinc-500">这是第一笔记录；再打卡一次，就会生成真实趋势。</p>
               </div>
             </div>
           ) : (
             <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300/80 text-center dark:border-zinc-700">
               <Scale className="mb-3 h-7 w-7 text-zinc-400" />
-              <p className="text-sm font-medium text-zinc-500">浠婂ぉ鐨勬暟瀛楋紝浼氭垚涓虹涓€鏉¤秼鍔裤€?/p>
+              <p className="text-sm font-medium text-zinc-500">今天的数字，会成为第一条趋势。</p>
             </div>
           )}
         </div>
       </section>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3 sm:flex-row" noValidate>
-        <label className="sr-only" htmlFor="weight-input">杈撳叆浠婃棩浣撻噸锛坘g锛?/label>
-        <input id="weight-input" type="number" step="0.1" min="1" max="300" inputMode="decimal" placeholder="杈撳叆浠婃棩浣撻噸锛坘g锛? value={newWeight} onChange={(event) => { setNewWeight(event.target.value); setFormError(''); }} className="apple-input min-w-0 flex-1" required />
+        <label className="sr-only" htmlFor="weight-input">输入今日体重（kg）</label>
+        <input id="weight-input" type="number" step="0.1" min="1" max="300" inputMode="decimal" placeholder="输入今日体重（kg）" value={newWeight} onChange={(event) => { setNewWeight(event.target.value); setFormError(''); }} className="apple-input min-w-0 flex-1" required />
         <button type="submit" disabled={isSaving || !newWeight} className="apple-button justify-center px-6">
           {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          {isSaving ? '淇濆瓨涓? : '鎵撳崱'}
+          {isSaving ? '保存中' : '打卡'}
         </button>
       </form>
       {formError && <p role="alert" className="mt-3 text-sm font-medium text-red-600">{formError}</p>}
