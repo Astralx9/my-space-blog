@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Globe, ExternalLink, Loader2 } from 'lucide-react';
-import { useStore } from '../store/useStore';
+import { useCallback, useEffect, useState } from 'react';
+import { ExternalLink, Globe, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
+import { useStore } from '../store/useStore';
 
 interface NewsItem {
   title: string;
@@ -10,231 +10,130 @@ interface NewsItem {
   source: string;
 }
 
-type RssResponse = { status?: string; items?: Array<Pick<NewsItem, 'title' | 'link' | 'pubDate'>> };
+type Source = { name: string; count: number };
+type NewsResponse = {
+  items?: NewsItem[];
+  sources?: Source[];
+  failedSources?: string[];
+  updatedAt?: string;
+};
 
-// We will use rss2json public API for easy parsing in browser without dealing with XML/CORS directly
-const RSS2JSON_API = 'https://api.rss2json.com/v1/api.json?rss_url=';
+const safeTime = (date: string) => {
+  const value = new Date(date);
+  return Number.isNaN(value.getTime()) ? '刚刚更新' : format(value, 'MM/dd HH:mm');
+};
 
 export default function NewsWidget() {
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
+  const [failedSources, setFailedSources] = useState<string[]>([]);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // State for dual-level filtering
-  const [region, setRegion] = useState<'all' | 'cn' | 'intl'>('all');
+  const [region, setRegion] = useState<'all' | 'cn' | 'intl'>('cn');
   const [topic, setTopic] = useState<'all' | 'tech' | 'finance' | 'ai'>('all');
-  
   const extractedColors = useStore((state) => state.extractedColors);
 
-  useEffect(() => {
-    const fetchNews = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const allNews: NewsItem[] = [];
-        
-        const feedsToFetch = [];
-        
-        // --- Region: CN (China) or ALL ---
-        if (region === 'all' || region === 'cn') {
-          if (topic === 'all' || topic === 'tech') {
-            feedsToFetch.push({ name: 'Solidot 科技', url: 'https://www.solidot.org/index.rss' });
-            feedsToFetch.push({ name: '少数派', url: 'https://rsshub.app/36kr/newsflashes' }); // Fallback 36Kr if solidot fails
-          }
-          if (topic === 'all' || topic === 'finance') {
-            feedsToFetch.push({ name: '华尔街见闻', url: 'https://rsshub.app/wallstreetcn/news/global' });
-          }
-          if (topic === 'all' || topic === 'ai') {
-            feedsToFetch.push({ name: 'AI资讯', url: 'https://rsshub.app/36kr/motif/32768' }); // 36Kr AI
-          }
-        }
-        
-        // --- Region: INTL (International) or ALL ---
-        if (region === 'all' || region === 'intl') {
-          if (topic === 'all' || topic === 'tech') {
-            feedsToFetch.push({ name: 'Hacker News', url: 'https://hnrss.org/frontpage' });
-            feedsToFetch.push({ name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' });
-          }
-          if (topic === 'all' || topic === 'finance') {
-            feedsToFetch.push({ name: 'WSJ Markets', url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml' });
-            feedsToFetch.push({ name: 'Yahoo Finance', url: 'https://search.yahoo.com/mrss/finance/news' });
-          }
-          if (topic === 'all' || topic === 'ai') {
-            feedsToFetch.push({ name: 'OpenAI Blog', url: 'https://openai.com/blog/rss.xml' });
-            feedsToFetch.push({ name: 'MIT Tech Review', url: 'https://www.technologyreview.com/topic/artificial-intelligence/feed' });
-          }
-        }
-
-        let successfulFeeds = 0;
-
-        for (const feed of feedsToFetch) {
-          try {
-            const res = await fetch(`${RSS2JSON_API}${encodeURIComponent(feed.url)}`);
-            if (!res.ok) continue;
-            const data = await res.json() as RssResponse;
-            if (data.status === 'ok' && data.items && data.items.length > 0) {
-              // Increase from 5 to 10 per feed to ensure we have enough items
-            const items = data.items.slice(0, 10).map((item) => ({
-                title: item.title,
-                link: item.link,
-                pubDate: item.pubDate,
-                source: feed.name
-              }));
-              allNews.push(...items);
-              successfulFeeds++;
-            }
-          } catch {
-            console.warn(`Failed to fetch feed ${feed.name}`);
-          }
-        }
-
-        // Sort by date desc
-        allNews.sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
-        setNews(allNews.slice(0, 20)); // Increase display limit to 20
-        
-        if (allNews.length === 0 && successfulFeeds === 0) {
-          setError('当前节点暂无可用资讯，请尝试切换其它分类。');
-        }
-      } finally {
-        setLoading(false);
+  const loadNews = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({ region, topic });
+      const result = await fetch(`/api/news?${params.toString()}`, { signal });
+      if (!result.ok) throw new Error(`资讯服务返回 ${result.status}`);
+      const payload = await result.json() as NewsResponse;
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      setNews(items);
+      setSources(Array.isArray(payload.sources) ? payload.sources : []);
+      setFailedSources(Array.isArray(payload.failedSources) ? payload.failedSources : []);
+      setUpdatedAt(payload.updatedAt || null);
+      if (items.length === 0) setError('当前筛选下没有可显示的真实资讯，请稍后刷新或切换分类。');
+    } catch (caughtError) {
+      if ((caughtError as Error).name !== 'AbortError') {
+        setError('资讯服务暂时不可用，请稍后重试。');
       }
-    };
-
-    fetchNews();
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
   }, [region, topic]);
 
-  return (
-    <div className="apple-surface flex h-full flex-col rounded-[2.5rem] p-7 sm:p-10">
-      <div className="mb-8 flex flex-col justify-between gap-5 2xl:flex-row 2xl:items-center">
-        <h2 className="flex shrink-0 items-center gap-3 text-2xl font-semibold tracking-[-0.035em]">
-          <Globe className="w-6 h-6" style={{ color: extractedColors?.secondary || '#10b981' }} />
-          今日资讯速递
-        </h2>
-        
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-          {/* Region Filter */}
-          <div className="segmented-control">
-            <button
-              onClick={() => setRegion('all')}
-              className={`segmented-button ${
-                region === 'all'
-                  ? 'segmented-button-active'
-                  : 'hover:text-zinc-900 dark:hover:text-white'
-              }`}
-            >
-              全部
-            </button>
-            <button
-              onClick={() => setRegion('cn')}
-              className={`segmented-button ${
-                region === 'cn'
-                  ? 'segmented-button-active'
-                  : 'hover:text-zinc-900 dark:hover:text-white'
-              }`}
-            >
-              国内
-            </button>
-            <button
-              onClick={() => setRegion('intl')}
-              className={`segmented-button ${
-                region === 'intl'
-                  ? 'segmented-button-active'
-                  : 'hover:text-zinc-900 dark:hover:text-white'
-              }`}
-            >
-              国际
-            </button>
-          </div>
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadNews(controller.signal);
+    return () => controller.abort();
+  }, [loadNews]);
 
-          {/* Topic Filter */}
-          <div className="segmented-control">
-            <button
-              onClick={() => setTopic('all')}
-              className={`segmented-button ${
-                topic === 'all'
-                  ? 'segmented-button-active'
-                  : 'hover:text-zinc-900 dark:hover:text-white'
-              }`}
-            >
-              综合
-            </button>
-            <button
-              onClick={() => setTopic('tech')}
-              className={`segmented-button ${
-                topic === 'tech'
-                  ? 'segmented-button-active'
-                  : 'hover:text-zinc-900 dark:hover:text-white'
-              }`}
-            >
-              科技
-            </button>
-            <button
-              onClick={() => setTopic('ai')}
-              className={`segmented-button ${
-                topic === 'ai'
-                  ? 'segmented-button-active'
-                  : 'hover:text-zinc-900 dark:hover:text-white'
-              }`}
-            >
-              AI
-            </button>
-            <button
-              onClick={() => setTopic('finance')}
-              className={`segmented-button ${
-                topic === 'finance'
-                  ? 'segmented-button-active'
-                  : 'hover:text-zinc-900 dark:hover:text-white'
-              }`}
-            >
-              财经
-            </button>
+  return (
+    <div className="apple-surface rounded-[2.5rem] p-6 sm:p-10">
+      <div className="flex flex-col justify-between gap-6 xl:flex-row xl:items-start">
+        <div>
+          <div className="flex items-center gap-3">
+            <Globe className="h-6 w-6" style={{ color: extractedColors?.secondary || '#10b981' }} />
+            <h2 className="text-2xl font-semibold tracking-[-0.035em]">新闻资讯</h2>
+          </div>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+            站内直连官方 RSS。来源、条数与暂不可用站点都会如实显示。
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="segmented-control" aria-label="新闻区域">
+            {([['cn', '国内'], ['intl', '国际'], ['all', '全部']] as const).map(([value, label]) => (
+              <button key={value} onClick={() => setRegion(value)} className={`segmented-button ${region === value ? 'segmented-button-active' : ''}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="segmented-control" aria-label="新闻分类">
+            {([['all', '综合'], ['tech', '科技'], ['ai', 'AI'], ['finance', '财经']] as const).map(([value, label]) => (
+              <button key={value} onClick={() => setTopic(value)} className={`segmented-button ${topic === value ? 'segmented-button-active' : ''}`}>
+                {label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="-mr-2 flex-1 space-y-4 overflow-y-auto pr-2">
+      <div className="mt-7 flex flex-wrap items-center gap-2" aria-live="polite">
+        {sources.map((source) => (
+          <span key={source.name} className="news-source-chip">
+            <ShieldCheck className="h-3.5 w-3.5" /> {source.name} · {source.count}
+          </span>
+        ))}
+        {failedSources.map((source) => <span key={source} className="news-source-chip news-source-chip-muted">{source} 暂不可用</span>)}
+        {updatedAt && <span className="ml-auto text-xs text-zinc-400">更新于 {safeTime(updatedAt)}</span>}
+      </div>
+
+      <div className="mt-7">
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-40 text-zinc-400 space-y-3">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: extractedColors?.secondary || '#10b981' }} />
-            <p className="text-sm">正在聚合全网资讯...</p>
+          <div className="flex h-64 flex-col items-center justify-center gap-3 text-zinc-400">
+            <Loader2 className="h-6 w-6 animate-spin" style={{ color: extractedColors?.secondary || '#10b981' }} />
+            <p className="text-sm">正在验证并汇集资讯...</p>
           </div>
         ) : error ? (
-          <div className="flex items-center justify-center h-40 text-red-500 text-sm">
-            {error}
+          <div className="flex min-h-52 flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-red-300/70 px-6 text-center text-sm text-red-600 dark:border-red-400/30 dark:text-red-300" role="alert">
+            <p>{error}</p>
+            <button className="apple-button-secondary" onClick={() => void loadNews()}><RefreshCw className="h-4 w-4" />重新获取</button>
           </div>
-        ) : news.length > 0 ? (
-          <ul className="divide-y divide-black/[0.06] dark:divide-white/[0.08]">
-            {news.map((item, idx) => (
-              <li key={idx} className="group py-4 first:pt-0">
-                <a 
-                  href={item.link} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full mt-2 shrink-0 transition-colors" style={{ backgroundColor: extractedColors?.secondary || '#10b981' }} />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="line-clamp-2 text-[15px] font-medium leading-snug text-zinc-900 transition-colors group-hover:text-[rgb(var(--theme-primary))] dark:text-zinc-100">
-                        {item.title}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1.5 text-xs text-zinc-500">
-                        <span className="font-medium">
-                          {item.source}
-                        </span>
-                        <span>{format(new Date(item.pubDate), 'HH:mm')}</span>
-                        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </div>
-                  </div>
+        ) : (
+          <ul className="grid gap-3" aria-label="新闻列表">
+            {news.map((item) => (
+              <li key={`${item.source}-${item.link}`}>
+                <a href={item.link} target="_blank" rel="noopener noreferrer" className="news-row group">
+                  <span className="news-row-dot" style={{ backgroundColor: extractedColors?.secondary || '#10b981' }} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block line-clamp-2 text-base font-semibold leading-snug text-zinc-900 transition-colors group-hover:text-[rgb(var(--theme-primary))] dark:text-zinc-100">
+                      {item.title}
+                    </span>
+                    <span className="mt-2 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      <span className="font-semibold">{item.source}</span><span>{safeTime(item.pubDate)}</span>
+                    </span>
+                  </span>
+                  <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-zinc-400 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[rgb(var(--theme-primary))]" />
                 </a>
               </li>
             ))}
           </ul>
-        ) : (
-          <div className="flex items-center justify-center h-40 text-zinc-400 text-sm border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl">
-            暂无最新资讯
-          </div>
         )}
       </div>
     </div>
