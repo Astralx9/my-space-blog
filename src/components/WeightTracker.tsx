@@ -30,20 +30,20 @@ export default function WeightTracker() {
   const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : null;
 
   return (
-    <div className="bg-white/[var(--component-bg-alpha)] dark:bg-zinc-950/[var(--component-bg-alpha)] backdrop-blur-md p-6 rounded-3xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-sm transition-colors duration-300">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Scale className="w-6 h-6" style={{ color: extractedColors?.primary || 'rgb(var(--theme-primary))' }} />
+    <div className="apple-surface flex h-full min-h-[34rem] flex-col rounded-[2.5rem] p-7 sm:p-10">
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <h2 className="flex items-center gap-3 text-2xl font-semibold tracking-[-0.035em]">
+          <Scale className="w-6 h-6" style={{ color: extractedColors?.primary || '#3b82f6' }} />
           体重记录器
         </h2>
         {latestWeight && (
-          <div className="text-sm text-zinc-500">
-            最新体重: <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{latestWeight}</span> kg
+          <div className="text-right text-xs font-medium text-zinc-500">
+            最新<br /><span className="text-2xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-zinc-100">{latestWeight}</span> kg
           </div>
         )}
       </div>
 
-      <div className="h-48 w-full mb-6">
+      <div className="mb-8 h-64 w-full flex-1">
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
@@ -57,9 +57,9 @@ export default function WeightTracker() {
               <Line 
                 type="monotone" 
                 dataKey="weight" 
-                stroke={extractedColors?.primary || 'rgb(var(--theme-primary))'}
+                stroke={extractedColors?.primary || '#3b82f6'}
                 strokeWidth={3}
-                dot={{ r: 4, fill: extractedColors?.primary || 'rgb(var(--theme-primary))', strokeWidth: 2, stroke: '#fff' }}
+                dot={{ r: 4, fill: extractedColors?.primary || '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
                 activeDot={{ r: 6, strokeWidth: 0 }}
               />
             </LineChart>
@@ -80,13 +80,13 @@ export default function WeightTracker() {
           placeholder="输入今日体重 (kg)"
           value={newWeight}
           onChange={(e) => setNewWeight(e.target.value)}
-          className="flex-1 px-4 py-2 bg-zinc-100/[var(--component-bg-alpha)] dark:bg-zinc-900/[var(--component-bg-alpha)] border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 theme-focus transition-all text-sm"
+          className="apple-input min-w-0 flex-1"
           required
         />
         <button
           type="submit"
           disabled={!newWeight}
-          className="flex items-center justify-center gap-1 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:opacity-50 transition-colors shadow-sm text-sm"
+          className="apple-button px-5"
         >
           <Plus className="w-4 h-4" />
           打卡
