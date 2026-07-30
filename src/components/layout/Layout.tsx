@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useStore } from '../../store/useStore';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function Layout() {
   const componentOpacity = useStore((state) => state.componentOpacity);
@@ -9,10 +9,40 @@ export default function Layout() {
   const extractedColors = useStore((state) => state.extractedColors);
   const photos = useStore((state) => state.photos);
   const setExtractedColors = useStore((state) => state.setExtractedColors);
-  const backgroundPhoto = useMemo(
-    () => photos.length > 0 ? photos[Math.floor(Math.random() * photos.length)] : null,
-    [photos],
+  const backgroundPhotoId = useRef<string | null>(null);
+  const [landscapePhotoIds, setLandscapePhotoIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all(photos.map((photo) => new Promise<{ id: string; isLandscape: boolean }>((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve({ id: photo.id, isLandscape: image.naturalWidth > image.naturalHeight });
+      image.onerror = () => resolve({ id: photo.id, isLandscape: false });
+      image.src = photo.url;
+    }))).then((dimensions) => {
+      if (cancelled) return;
+      const nextIds = dimensions.filter((item) => item.isLandscape).map((item) => item.id);
+      setLandscapePhotoIds((current) => current.length === nextIds.length && current.every((id, index) => id === nextIds[index]) ? current : nextIds);
+    });
+
+    return () => { cancelled = true; };
+  }, [photos]);
+
+  const landscapePhotos = useMemo(
+    () => photos.filter((photo) => landscapePhotoIds.includes(photo.id)),
+    [photos, landscapePhotoIds],
   );
+  const backgroundPhoto = useMemo(() => {
+    if (landscapePhotos.length === 0) return null;
+
+    const retainedPhoto = landscapePhotos.find((photo) => photo.id === backgroundPhotoId.current);
+    if (retainedPhoto) return retainedPhoto;
+
+    const nextPhoto = landscapePhotos[Math.floor(Math.random() * landscapePhotos.length)];
+    backgroundPhotoId.current = nextPhoto.id;
+    return nextPhoto;
+  }, [landscapePhotos]);
 
   useEffect(() => {
     setExtractedColors(backgroundPhoto?.extractedColors ?? null);
@@ -63,3 +93,4 @@ export default function Layout() {
     </div>
   );
 }
+
