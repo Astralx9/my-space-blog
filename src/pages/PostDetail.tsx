@@ -19,7 +19,7 @@ export default function PostDetail() {
         <h2 className="text-2xl font-bold mb-4">文章不存在或已被删除</h2>
         <button 
           onClick={() => navigate('/posts')}
-          className="theme-text-primary hover:underline"
+          className="text-blue-500 hover:underline"
         >
           返回列表
         </button>
@@ -42,33 +42,34 @@ export default function PostDetail() {
   };
 
   return (
-    <article className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
-      <div className="flex items-center justify-between mb-8">
+    <article className="page-enter mx-auto max-w-5xl pb-20">
+      <div className="flex min-h-[26vh] items-end justify-between pb-8 text-white">
         <button 
           onClick={() => navigate(-1)}
-          className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors flex items-center gap-2 text-zinc-500 dark:text-zinc-400"
+          className="flex min-h-11 items-center gap-2 rounded-full border border-white/25 bg-black/15 px-4 text-sm font-semibold text-white transition hover:bg-black/25"
         >
           <ArrowLeft className="w-5 h-5" />
           返回
         </button>
         
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate(`/editor/${post.id}`)} className="p-2 theme-text-primary theme-bg-primary-soft rounded-full transition-colors" title="编辑文章">
+          <button onClick={() => navigate(`/editor/${post.id}`)} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/15 text-white transition hover:bg-black/25" title="编辑文章">
             <Pencil className="w-5 h-5" />
           </button>
-          <button onClick={handleDelete} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors" title="删除文章">
+          <button onClick={handleDelete} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/15 text-white transition hover:bg-red-500" title="删除文章">
             <Trash2 className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      <header className="mb-10 border-b border-zinc-100 dark:border-zinc-800 pb-8">
+      <div className="apple-surface rounded-[2.75rem] p-7 sm:p-10 md:p-16">
+      <header className="mb-12 border-b border-black/[0.07] pb-10 dark:border-white/[0.09]">
         <div className="flex items-center gap-3 mb-6">
           <span 
             className={`px-3 py-1 text-xs font-medium rounded-full flex items-center gap-1.5 ${
               isLearning 
-                ? 'theme-bg-primary-soft theme-text-primary'
-                : 'theme-bg-secondary-soft theme-text-secondary'
+                ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400'
+                : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
             }`}
           >
             {isLearning ? <Book className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
@@ -80,7 +81,7 @@ export default function PostDetail() {
           {post.isDraft && <span className="text-sm text-amber-600">草稿</span>}
         </div>
 
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 leading-tight">
+        <h1 className="text-5xl font-semibold leading-[1.02] tracking-[-0.055em] text-zinc-900 dark:text-zinc-100 md:text-7xl">
           {post.title}
         </h1>
         {post.tags.length > 0 && (
@@ -96,11 +97,12 @@ export default function PostDetail() {
             h1: ({ node, ...props }) => { void node; return <h1 className="text-3xl font-bold mt-12 mb-6" {...props} />; },
             h2: ({ node, ...props }) => { void node; return <h2 className="text-2xl font-bold mt-10 mb-5" {...props} />; },
             p: ({ node, ...props }) => { void node; return <p className="leading-relaxed mb-6" {...props} />; },
-            a: ({ node, ...props }) => { void node; return <a className="theme-text-primary hover:underline" {...props} />; },
+            a: ({ node, ...props }) => { void node; return <a className="text-blue-600 dark:text-blue-400 hover:underline" {...props} />; },
           }}
         >
           {post.content}
         </ReactMarkdown>
+      </div>
       </div>
     </article>
   );
