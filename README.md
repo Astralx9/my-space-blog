@@ -1,4 +1,6 @@
-# My Space
+# My Space Blog — Supabase + Vercel 主线
+
+> 当前分支：`master`。本目录只开发 Supabase + Vercel 版本。腾讯云 PostgreSQL 自托管版本在服务器上运行，对应分支为 `selfhost/tencent-cloud`，不要将两套架构合并。
 
 一个基于 React、Vite 和 Supabase 的个人记录空间，包含文章、摄影作品、Todo、体重记录与轻量 PWA 支持。
 
