@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ExternalLink, Globe, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { useStore } from '../store/useStore';
+import { newsUrl } from '../lib/api';
 
 interface NewsItem {
   title: string;
@@ -39,7 +40,7 @@ export default function NewsWidget() {
     setError(null);
     try {
       const params = new URLSearchParams({ region, topic });
-      const result = await fetch(`/api/news?${params.toString()}`, { signal });
+      const result = await fetch(newsUrl(params), { signal, credentials: 'same-origin' });
       if (!result.ok) throw new Error(`资讯服务返回 ${result.status}`);
       const payload = await result.json() as NewsResponse;
       const items = Array.isArray(payload.items) ? payload.items : [];

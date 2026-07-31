@@ -11,7 +11,6 @@ import News from './pages/News';
 import Weight from './pages/Weight';
 import { useStore } from './store/useStore';
 import { useAuth } from './hooks/useAuth';
-import { isSupabaseConfigured } from './lib/supabase';
 import { ArrowRight, Loader2, LogIn, UserPlus } from 'lucide-react';
 
 const formatAuthError = (error: unknown, mode: 'signin' | 'signup') => {
@@ -25,9 +24,10 @@ const formatAuthError = (error: unknown, mode: 'signin' | 'signup') => {
   if (status === 429 || /rate limit|too many requests/i.test(message)) return '尝试次数过多，请稍后再试。';
   if (/failed to fetch|network|fetch/i.test(message)) return '无法连接登录服务，请检查网络后重试。';
   if (status && status >= 500) return '登录服务暂时不可用，请稍后再试。';
+  if (code === 'ALREADY_EXISTS' || /邮箱已注册|already registered|already exists/i.test(message)) return '该邮箱已注册，请切换到登录后继续。';
+  if (code === 'VALIDATION_ERROR') return message || '注册信息不符合要求，请检查后重试。';
+  if (code === 'INVALID_CREDENTIALS' || code === 'invalid_credentials' || /invalid login credentials/i.test(message)) return '邮箱或密码不正确，请重新输入。';
   if (code === 'email_not_confirmed' || /email not confirmed/i.test(message)) return '邮箱尚未验证，请先查收验证邮件并完成确认。';
-  if (code === 'invalid_credentials' || /invalid login credentials/i.test(message)) return '邮箱或密码不正确，请重新输入。';
-  if (code === 'user_already_exists' || /already registered|already exists/i.test(message)) return '该邮箱已注册，请直接登录或使用其他邮箱。';
   if (code === 'weak_password' || /password should be/i.test(message)) return '密码不符合要求，请使用至少 6 位密码。';
   if (code === 'signup_disabled' || /signups not allowed/i.test(message)) return '当前不开放注册，请联系网站管理员。';
   if (status === 401 || status === 403) return mode === 'signin'
@@ -47,11 +47,6 @@ function AuthScreen() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!isSupabaseConfigured) {
-      setMessage('登录服务尚未完成配置，请联系网站管理员检查生产环境配置。');
-      return;
-    }
-
     const normalizedEmail = email.trim();
     if (!normalizedEmail) {
       setMessage('请输入邮箱地址。');
@@ -65,8 +60,8 @@ function AuthScreen() {
       setMessage('请输入密码。');
       return;
     }
-    if (password.length < 6) {
-      setMessage('密码至少需要 6 位。');
+    if (password.length < 8) {
+      setMessage('密码至少需要 8 位。');
       return;
     }
 
@@ -74,16 +69,14 @@ function AuthScreen() {
     setMessage('');
 
     try {
-      const result = mode === 'signin'
+      await (mode === 'signin'
         ? await signIn(normalizedEmail, password)
-        : await signUp(normalizedEmail, password);
-
-      if (result.error) {
-        setMessage(formatAuthError(result.error, mode));
-      } else if (mode === 'signup') {
-        setMessage('注册成功。如果项目启用了邮箱确认，请先查收邮件。');
-      }
+        : await signUp(normalizedEmail, password));
     } catch (error) {
+      const details = error && typeof error === 'object'
+        ? error as { code?: string }
+        : undefined;
+      if (mode === 'signup' && details?.code === 'ALREADY_EXISTS') setMode('signin');
       setMessage(formatAuthError(error, mode));
     } finally {
       setSubmitting(false);
@@ -122,9 +115,9 @@ function AuthScreen() {
           <input
             type="password"
             required
-            minLength={6}
+            minLength={8}
             autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            placeholder="密码（至少 6 位）"
+            placeholder="密码（至少 8 位）"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="apple-input"
@@ -176,7 +169,7 @@ function App() {
   if (!session) return <AuthScreen />;
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />

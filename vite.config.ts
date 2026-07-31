@@ -5,7 +5,15 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/blog/',
   server: {
+    proxy: {
+      '/blog/api': {
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/blog/, ''),
+      },
+    },
     hmr: {
       clientPort: 443,
     },
@@ -26,9 +34,9 @@ export default defineConfig({
         theme_color: '#18181b',
         background_color: '#18181b',
         display: 'standalone',
-        start_url: '/',
+        start_url: './',
         icons: [
-          { src: '/pwa-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: 'pwa-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],
       },
       workbox: {

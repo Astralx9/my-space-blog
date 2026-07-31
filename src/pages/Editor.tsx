@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useStore, type Category } from '../store/useStore';
 import { ArrowLeft, FileText, Image as ImageIcon, Loader2, Save, Send } from 'lucide-react';
 import { compressImageInWorker } from '../lib/imageWorker';
-import { dataUrlToBlob, uploadBlogImage } from '../lib/mediaStorage';
+import { contentApi } from '../lib/api';
 
 type Status = { kind: 'idle' | 'uploading' | 'success' | 'error'; message?: string };
 
@@ -40,9 +40,9 @@ export default function Editor() {
     try {
       setUploadStatus({ kind: 'uploading', message: '正在压缩并上传图片…' });
       const compressedImage = await compressImageInWorker(file);
-      const blob = await dataUrlToBlob(compressedImage);
+      const blob = await (await fetch(compressedImage)).blob();
       if (blob.size > 2_500_000) throw new Error('压缩后仍超过 2.5MB，请选择更小的图片');
-      const uploaded = await uploadBlogImage(blob, 'inline');
+      const uploaded = await contentApi.uploadInlineImage(blob);
       setContent((previous) => `${previous}\n![${file.name}](${uploaded.url})\n`);
       setUploadStatus({ kind: 'success', message: '图片已插入正文' });
     } catch (error) {

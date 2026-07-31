@@ -1,44 +1,47 @@
-# My Space
+# My Space Blog — 自托管版
 
-一个基于 React、Vite 和 Supabase 的个人记录空间，包含文章、摄影作品、Todo、体重记录与轻量 PWA 支持。
+React/Vite 前端配套 Fastify + 本地 PostgreSQL。Supabase、Vercel Function 与 Supabase Storage 均不参与运行时。首次启动的是空数据库，不导入或迁移旧 Supabase 数据。
+
+## 数据与权限模型
+
+- 注册会自动创建唯一博客；`blogs.owner_user_id` 有唯一约束。
+- JWT 只存于 `HttpOnly` Cookie，默认有效期 14 天；服务端每次请求都验证 JWT 对应的用户和博客仍存在。
+- 文章、相册、待办、体重、内嵌图片均以 `blog_id` 过滤。文件不暴露为静态目录，`/api/media/:id` 必须通过当前用户验证后才能读取。
+- PostgreSQL schema 在 `server/migrations/001_initial_schema.sql`，`npm run db:migrate` 使用 `schema_migrations` 记录已执行迁移。
 
 ## 本地运行
 
+需要 Node 22+ 与本地 PostgreSQL，或 Docker Compose。
+
 ```bash
+cp .env.example .env
 npm install
-cp .env.example .env.local
+npm run db:migrate
+npm run dev:server
+# 另一个终端：Vite 的 /blog/api 会代理到 3001
 npm run dev
 ```
 
-在 `.env.local` 中配置：
+打开 `http://localhost:5173/blog/`。生产 API 配置使用 `.env.server`；可从 `.env.server.example` 复制并填入强随机 `JWT_SECRET` 与数据库密码。
 
-```env
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your-publishable-or-anon-key
+```bash
+cp .env.server.example .env.server
+docker compose up -d --build
 ```
 
-不要把 `service_role` 或任何私钥放进 Vite 环境变量。
+`docker compose` reads its PostgreSQL variables and `DATABASE_URL` directly from `.env.server`; keep the credentials in those two values consistent.
 
-## 首次创建 Supabase 数据库
+或者在已配置的 PostgreSQL 上执行：
 
-在 Supabase SQL Editor 执行 `supabase_setup.sql`。它会创建数据表、按登录用户隔离的 RLS 策略，以及公共读取、仅本人写入的 `blog-media` 图片桶。
+```bash
+npm run build
+npm run db:migrate
+npm run start
+```
 
-## 已有项目升级
+`npm run start` 仅启动 Fastify API（默认 `127.0.0.1:3001`）；生产前端由 Nginx 提供 `dist/` 静态文件。`deploy/nginx-blog.conf.example` 已将 `/blog/api/*` 反代为 Fastify 的 `/api/*`，并保留 React 的 `/blog/` SPA 回退。部署时设置 `COOKIE_SECURE=true` 并通过 HTTPS 提供站点。
 
-已部署过旧版本时，请先在 Supabase SQL Editor 执行：
-
-`supabase/migrations/20260726190000_secure_content_and_media.sql`
-
-该迁移会：
-
-- 将旧内容归属到项目中最早创建的认证账号；
-- 移除匿名全写入策略，改为 `auth.uid()` 所有权策略；
-- 添加文章标签、草稿、更新时间和图片 Storage 路径；
-- 创建 `blog-media` Storage bucket 和其对象策略。
-
-执行迁移后，以该账号登录网站，确认历史文章和图片存在，再部署新版前端。
-
-## 验证命令
+## 验证
 
 ```bash
 npm run lint
@@ -46,17 +49,14 @@ npm run check
 npm run build
 ```
 
-生产构建会生成 `manifest.webmanifest` 和 Service Worker；支持安装为轻量 PWA，并缓存应用外壳以改善弱网下的启动体验。
+## 运行环境变量
 
-## 新闻资讯接口
-
-新闻页通过 Vercel Function `GET /api/news` 获取资讯，而不是让浏览器调用第三方 RSS 代理。这样可以由服务端处理跨域、8 秒超时和 5 分钟 CDN 缓存，并且只展示实际请求成功的源。
-
-可选参数：
-
-- `region=cn|intl|all`，默认 `cn`
-- `topic=tech|finance|ai|all`，默认 `all`
-
-国内源为 IT之家、少数派和 36氪的官方 RSS；国际源为 Hacker News、The Verge 和 OpenAI News 的官方 RSS。响应会包含 `items`、成功的 `sources` 和 `failedSources`，因此前端不会用虚构内容或虚构来源补位。
-
-本地联调该接口请使用 `vercel dev`；仅运行 `npm run dev` 时 Vite 不会启动 `api/news.ts`。
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string for a direct Node deployment |
+| `JWT_SECRET` | At least 32 random characters; keep only on the server |
+| `MEDIA_DIR` | Private local directory for uploads |
+| `COOKIE_PATH` | `/blog` when behind the supplied Nginx config |
+| `COOKIE_SECURE` | `true` behind HTTPS, `false` only for local HTTP |
+| `PUBLIC_API_PREFIX` | Browser-visible API prefix, normally `/blog/api` |
+| `UPLOAD_LIMIT_BYTES` | Per-image server limit; default 3 MB |

@@ -1,0 +1,23 @@
+[Unit]
+Description=My Space Blog self-hosted API
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=myblog
+Group=myblog
+WorkingDirectory=/home/code/my_blog_space
+EnvironmentFile=/etc/my-space-blog/production.env
+Environment=NODE_ENV=production
+ExecStart=/opt/node-v22/bin/node /home/code/my_blog_space/server/dist/index.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/var/lib/my-space-blog/media
+
+[Install]
+WantedBy=multi-user.target

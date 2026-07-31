@@ -29,8 +29,5 @@
       ]
     }
   },
-  "include": [
-    "src",
-    "api"
-  ]
+  "include": ["src"]
 }

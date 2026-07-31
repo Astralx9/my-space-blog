@@ -4,7 +4,6 @@ import { CalendarDays, ImagePlus, Loader2, MapPin, Palette, Save, Trash2, X } fr
 import { format } from 'date-fns';
 import { compressImageInWorker } from '../lib/imageWorker';
 import { extractImageColors } from '../lib/extractImageColors';
-import { MediaUploadError } from '../lib/mediaStorage';
 import type { Photo } from '../store/useStore';
 
 type UploadStage = 'queued' | 'compressing' | 'uploading' | 'saving' | 'success' | 'error';
@@ -28,15 +27,13 @@ const stageLabel: Record<UploadStage, string> = {
 
 const uploadErrorMessage = (error: unknown) => {
   if (!navigator.onLine) return '当前网络不可用，请恢复网络后重试';
-  if (error instanceof MediaUploadError) return error.message;
-
   const details = error && typeof error === 'object'
     ? error as { code?: string; status?: number }
     : undefined;
   if (details?.code === '42501' || details?.status === 403) return '当前账号没有上传或保存图片的权限，请重新登录后重试';
   if (details?.status === 401) return '登录状态已失效，请重新登录后上传';
   if (details?.status === 413) return '图片超过大小限制，请选择更小的图片';
-  if (details?.code === 'PGRST204') return '网站的数据结构尚未同步，请刷新页面后重试';
+  if (details?.code === 'INVALID_COLORS') return '图片配色数据无法保存，请重试';
 
   const message = error instanceof Error ? error.message : '';
   if (message.includes('仅支持') || message.includes('压缩后') || message.includes('登录') || message.includes('图片文件已上传')) return message;
@@ -175,7 +172,7 @@ export default function Gallery() {
     setIsSavingMetadata(true);
     try {
       const nextMetadata = {
-        takenAt: metadata.takenAt ? new Date(`${metadata.takenAt}T12:00:00`).toISOString() : null,
+        takenAt: metadata.takenAt || null,
         location: metadata.location,
         story: metadata.story,
       };

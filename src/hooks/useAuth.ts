@@ -1,39 +1,31 @@
-import { useEffect, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { useCallback, useEffect, useState } from 'react';
+import { authApi, type CurrentUser } from '../lib/api';
 
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (active) {
-        setSession(data.session);
-        setLoading(false);
-      }
-    });
-
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setLoading(false);
-    });
-
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-    };
+    authApi.me()
+      .then(({ user }) => { if (active) setSession(user); })
+      .catch(() => { if (active) setSession(null); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  const signIn = (email: string, password: string) =>
-    supabase.auth.signInWithPassword({ email, password });
-
-  const signUp = (email: string, password: string) =>
-    supabase.auth.signUp({ email, password });
-
-  const signOut = () => supabase.auth.signOut();
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { user } = await authApi.login(email, password);
+    setSession(user);
+  }, []);
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { user } = await authApi.register(email, password);
+    setSession(user);
+  }, []);
+  const signOut = useCallback(async () => {
+    await authApi.logout();
+    setSession(null);
+  }, []);
 
   return { session, loading, signIn, signUp, signOut };
 }
