@@ -22,6 +22,7 @@ interface AppState {
   extractedColors: { primary: string; secondary: string } | null;
   isInitialized: boolean;
   fetchData: () => Promise<void>;
+  resetData: () => void;
   addPost: (post: PostInput) => Promise<Post>;
   updatePost: (id: string, post: PostInput) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
@@ -57,6 +58,7 @@ export const useStore = create<AppState>()(persist((set) => ({
       throw error;
     }
   },
+  resetData: () => set({ posts: [], photos: [], weights: [], todos: [], extractedColors: null, isInitialized: false }),
   addPost: async (input) => {
     const post = await contentApi.createPost(input) as Post;
     set((state) => ({ posts: [post, ...state.posts] }));

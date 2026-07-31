@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
 import Posts from './pages/Posts';
@@ -37,16 +37,24 @@ const formatAuthError = (error: unknown, mode: 'signin' | 'signup') => {
   return mode === 'signin' ? '登录失败，请稍后重试。' : '注册失败，请稍后重试。';
 };
 
-function AuthScreen() {
-  const { signIn, signUp } = useAuth();
+type AuthAction = (email: string, password: string) => Promise<void>;
+
+type AuthScreenProps = {
+  signIn: AuthAction;
+  signUp: AuthAction;
+};
+
+function AuthScreen({ signIn, signUp }: AuthScreenProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (submittingRef.current) return;
     const normalizedEmail = email.trim();
     if (!normalizedEmail) {
       setMessage('请输入邮箱地址。');
@@ -65,6 +73,7 @@ function AuthScreen() {
       return;
     }
 
+    submittingRef.current = true;
     setSubmitting(true);
     setMessage('');
 
@@ -79,6 +88,7 @@ function AuthScreen() {
       if (mode === 'signup' && details?.code === 'ALREADY_EXISTS') setMode('signin');
       setMessage(formatAuthError(error, mode));
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -149,11 +159,16 @@ function AuthScreen() {
 function App() {
   const isInitialized = useStore(state => state.isInitialized);
   const fetchData = useStore(state => state.fetchData);
-  const { session, loading } = useAuth();
+  const resetData = useStore(state => state.resetData);
+  const { session, loading, signIn, signUp } = useAuth();
 
   useEffect(() => {
-    if (session) fetchData();
-  }, [fetchData, session]);
+    if (!session) {
+      resetData();
+      return;
+    }
+    void fetchData().catch(() => undefined);
+  }, [fetchData, resetData, session]);
 
   if (loading || (session && !isInitialized)) {
     return (
@@ -166,7 +181,7 @@ function App() {
     );
   }
 
-  if (!session) return <AuthScreen />;
+  if (!session) return <AuthScreen signIn={signIn} signUp={signUp} />;
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>

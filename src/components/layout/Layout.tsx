@@ -1,7 +1,16 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useStore } from '../../store/useStore';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+
+const shuffled = <T,>(items: T[]) => {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const nextIndex = Math.floor(Math.random() * (index + 1));
+    [result[index], result[nextIndex]] = [result[nextIndex], result[index]];
+  }
+  return result;
+};
 
 export default function Layout() {
   const componentOpacity = useStore((state) => state.componentOpacity);
@@ -10,39 +19,51 @@ export default function Layout() {
   const photos = useStore((state) => state.photos);
   const setExtractedColors = useStore((state) => state.setExtractedColors);
   const backgroundPhotoId = useRef<string | null>(null);
-  const [landscapePhotoIds, setLandscapePhotoIds] = useState<string[]>([]);
+  const [backgroundPhoto, setBackgroundPhoto] = useState<(typeof photos)[number] | null>(null);
+  const [isBackgroundLoaded, setIsBackgroundLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all(photos.map((photo) => new Promise<{ id: string; isLandscape: boolean }>((resolve) => {
-      const image = new Image();
-      image.onload = () => resolve({ id: photo.id, isLandscape: image.naturalWidth > image.naturalHeight });
-      image.onerror = () => resolve({ id: photo.id, isLandscape: false });
-      image.src = photo.url;
-    }))).then((dimensions) => {
-      if (cancelled) return;
-      const nextIds = dimensions.filter((item) => item.isLandscape).map((item) => item.id);
-      setLandscapePhotoIds((current) => current.length === nextIds.length && current.every((id, index) => id === nextIds[index]) ? current : nextIds);
-    });
+    const retainedPhoto = backgroundPhotoId.current
+      ? photos.find((photo) => photo.id === backgroundPhotoId.current)
+      : undefined;
+    if (retainedPhoto) {
+      setBackgroundPhoto(retainedPhoto);
+      return () => { cancelled = true; };
+    }
+
+    const findLandscapePhoto = async () => {
+      for (const photo of shuffled(photos)) {
+        const image = new Image();
+        image.decoding = 'async';
+        image.fetchPriority = 'high';
+        const isLandscape = await new Promise<boolean>((resolve) => {
+          image.onload = () => resolve(image.naturalWidth > image.naturalHeight);
+          image.onerror = () => resolve(false);
+          image.src = photo.url;
+        });
+
+        if (cancelled) return;
+        if (isLandscape) {
+          backgroundPhotoId.current = photo.id;
+          setIsBackgroundLoaded(false);
+          setBackgroundPhoto(photo);
+          return;
+        }
+      }
+
+      if (!cancelled) {
+        backgroundPhotoId.current = null;
+        setIsBackgroundLoaded(false);
+        setBackgroundPhoto(null);
+      }
+    };
+
+    void findLandscapePhoto();
 
     return () => { cancelled = true; };
   }, [photos]);
-
-  const landscapePhotos = useMemo(
-    () => photos.filter((photo) => landscapePhotoIds.includes(photo.id)),
-    [photos, landscapePhotoIds],
-  );
-  const backgroundPhoto = useMemo(() => {
-    if (landscapePhotos.length === 0) return null;
-
-    const retainedPhoto = landscapePhotos.find((photo) => photo.id === backgroundPhotoId.current);
-    if (retainedPhoto) return retainedPhoto;
-
-    const nextPhoto = landscapePhotos[Math.floor(Math.random() * landscapePhotos.length)];
-    backgroundPhotoId.current = nextPhoto.id;
-    return nextPhoto;
-  }, [landscapePhotos]);
 
   useEffect(() => {
     setExtractedColors(backgroundPhoto?.extractedColors ?? null);
@@ -69,20 +90,20 @@ export default function Layout() {
         '--sidebar-width': isCollapsed ? '6.5rem' : '17.5rem',
       } as React.CSSProperties}
     >
-      <div className="fixed inset-0 z-[-3] bg-[#f5f5f7] dark:bg-black">
-        {backgroundPhoto && (
-          <img
-            src={backgroundPhoto.url}
-            alt=""
-            aria-hidden="true"
-            className="h-full w-full scale-[1.02] object-cover"
-          />
-        )}
-      </div>
-      <div className="pointer-events-none fixed inset-0 z-[-2] bg-[linear-gradient(90deg,rgba(0,0,0,0.22)_0%,transparent_72%),linear-gradient(180deg,rgba(0,0,0,0.20)_0%,rgba(0,0,0,0.04)_34%,rgba(245,245,247,0.78)_70%,rgba(245,245,247,0.96)_100%)] dark:bg-[linear-gradient(90deg,rgba(0,0,0,0.30)_0%,transparent_72%),linear-gradient(180deg,rgba(0,0,0,0.36)_0%,rgba(0,0,0,0.14)_34%,rgba(0,0,0,0.78)_72%,rgba(0,0,0,0.96)_100%)]" />
-      {!backgroundPhoto && (
-        <div className="pointer-events-none fixed inset-0 z-[-3] bg-[radial-gradient(circle_at_76%_12%,rgb(var(--theme-primary)/0.46),transparent_34%),radial-gradient(circle_at_18%_28%,rgb(var(--theme-secondary)/0.24),transparent_28%),linear-gradient(145deg,#111827_0%,#172554_52%,#09090b_100%)]" />
+      <div className="pointer-events-none fixed inset-0 z-[-3] bg-[radial-gradient(circle_at_76%_12%,rgb(var(--theme-primary)/0.46),transparent_34%),radial-gradient(circle_at_18%_28%,rgb(var(--theme-secondary)/0.24),transparent_28%),linear-gradient(145deg,#111827_0%,#172554_52%,#09090b_100%)]" />
+      {backgroundPhoto && (
+        <img
+          src={backgroundPhoto.url}
+          alt=""
+          aria-hidden="true"
+          fetchPriority="high"
+          decoding="async"
+          onLoad={() => setIsBackgroundLoaded(true)}
+          onError={() => setIsBackgroundLoaded(false)}
+          className={`pointer-events-none fixed inset-0 z-[-2] h-full w-full scale-[1.02] object-cover transition-opacity duration-700 ease-out ${isBackgroundLoaded ? 'opacity-100' : 'opacity-0'}`}
+        />
       )}
+      <div className="pointer-events-none fixed inset-0 z-[-1] bg-[linear-gradient(90deg,rgba(0,0,0,0.22)_0%,transparent_72%),linear-gradient(180deg,rgba(0,0,0,0.20)_0%,rgba(0,0,0,0.04)_34%,rgba(245,245,247,0.78)_70%,rgba(245,245,247,0.96)_100%)] dark:bg-[linear-gradient(90deg,rgba(0,0,0,0.30)_0%,transparent_72%),linear-gradient(180deg,rgba(0,0,0,0.36)_0%,rgba(0,0,0,0.14)_34%,rgba(0,0,0,0.78)_72%,rgba(0,0,0,0.96)_100%)]" />
 
       <Sidebar />
       <main className="relative z-10 min-h-screen min-w-0 transition-[padding] duration-500 ease-out md:pl-[var(--sidebar-width)]">

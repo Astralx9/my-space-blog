@@ -1,5 +1,6 @@
 const MAX_SIDE = 1600;
 const JPEG_QUALITY = 0.72;
+const WORKER_TIMEOUT_MS = 20_000;
 
 const compressOnMainThread = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -50,14 +51,9 @@ export const compressImageInWorker = (file: File): Promise<string> => {
           
           if (typeof OffscreenCanvas !== 'undefined' && typeof createImageBitmap !== 'undefined') {
             const bitmap = await createImageBitmap(file);
-            let width = bitmap.width;
-            let height = bitmap.height;
-            const MAX_WIDTH = ${MAX_SIDE};
-            
-            if (width > MAX_WIDTH) {
-              height = Math.round((height * MAX_WIDTH) / width);
-              width = MAX_WIDTH;
-            }
+            const scale = Math.min(1, ${MAX_SIDE} / Math.max(bitmap.width, bitmap.height));
+            const width = Math.max(1, Math.round(bitmap.width * scale));
+            const height = Math.max(1, Math.round(bitmap.height * scale));
             
             const canvas = new OffscreenCanvas(width, height);
             const ctx = canvas.getContext('2d');
@@ -81,31 +77,47 @@ export const compressImageInWorker = (file: File): Promise<string> => {
       };
     `;
     
+    let worker: Worker | undefined;
+    let workerUrl: string | undefined;
+    let timeoutId: number | undefined;
+    let settled = false;
+    let fallbackStarted = false;
+
+    const cleanup = () => {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      worker?.terminate();
+      if (workerUrl) URL.revokeObjectURL(workerUrl);
+    };
+    const settle = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback();
+    };
+    const fallback = () => {
+      if (settled || fallbackStarted) return;
+      fallbackStarted = true;
+      cleanup();
+      compressOnMainThread(file).then(
+        (result) => settle(() => resolve(result)),
+        (error) => settle(() => reject(error)),
+      );
+    };
+
     try {
       const blob = new Blob([workerCode], { type: 'application/javascript' });
-      const workerUrl = URL.createObjectURL(blob);
-      const worker = new Worker(workerUrl);
-      
-      worker.onmessage = (e) => {
-        if (e.data.success) {
-          resolve(e.data.base64);
-        } else {
-          compressOnMainThread(file).then(resolve, reject);
-        }
-        worker.terminate();
-        URL.revokeObjectURL(workerUrl);
+      workerUrl = URL.createObjectURL(blob);
+      worker = new Worker(workerUrl);
+      timeoutId = window.setTimeout(fallback, WORKER_TIMEOUT_MS);
+
+      worker.onmessage = (event) => {
+        if (event.data.success) settle(() => resolve(event.data.base64));
+        else fallback();
       };
-      
-      worker.onerror = () => {
-        compressOnMainThread(file).then(resolve, reject);
-        worker.terminate();
-        URL.revokeObjectURL(workerUrl);
-      };
-      
+      worker.onerror = fallback;
       worker.postMessage(file);
     } catch {
-      // Fallback if Worker creation fails.
-      compressOnMainThread(file).then(resolve, reject);
+      fallback();
     }
   });
 };

@@ -7,6 +7,13 @@ server {
     root /home/code/my_blog_space/dist;
     index index.html;
 
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/json application/javascript text/javascript image/svg+xml;
+
     location = /blog {
         return 301 /blog/;
     }
@@ -19,6 +26,12 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location ~ "^/blog/assets/.+-[A-Za-z0-9_-]{8,}\.(?:js|css|json|svg|woff2?)$" {
+        rewrite ^/blog/(.*)$ /$1 break;
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
     }
 
     location /blog/ {

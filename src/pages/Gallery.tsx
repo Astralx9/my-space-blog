@@ -28,11 +28,13 @@ const stageLabel: Record<UploadStage, string> = {
 const uploadErrorMessage = (error: unknown) => {
   if (!navigator.onLine) return '当前网络不可用，请恢复网络后重试';
   const details = error && typeof error === 'object'
-    ? error as { code?: string; status?: number }
+    ? error as { code?: string; status?: number; message?: string }
     : undefined;
   if (details?.code === '42501' || details?.status === 403) return '当前账号没有上传或保存图片的权限，请重新登录后重试';
   if (details?.status === 401) return '登录状态已失效，请重新登录后上传';
   if (details?.status === 413) return '图片超过大小限制，请选择更小的图片';
+  if (details?.code === 'FILE_REQUIRED') return '没有检测到图片文件，请重新选择后上传';
+  if (details?.code === 'VALIDATION_ERROR') return details.message || '图片信息格式不正确，请重试';
   if (details?.code === 'INVALID_COLORS') return '图片配色数据无法保存，请重试';
 
   const message = error instanceof Error ? error.message : '';
@@ -59,6 +61,17 @@ const getImageColors = (file: File) => new Promise<{ primary: string; secondary:
   };
   image.src = objectUrl;
 });
+
+const createUploadId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return `upload-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const formatPhotoDate = (value: string | null | undefined) => {
+  if (!value) return '';
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] || '';
+};
 
 export default function Gallery() {
   const photos = useStore((state) => state.photos);
@@ -95,7 +108,7 @@ export default function Gallery() {
     const files = Array.from(fileList);
     if (files.length === 0) return;
 
-    const items = files.map((file) => ({ id: crypto.randomUUID(), name: file.name, stage: 'queued' as const, progress: 0 }));
+    const items = files.map((file) => ({ id: createUploadId(), name: file.name, stage: 'queued' as const, progress: 0 }));
     setQueue(items);
     setNotice({ kind: 'idle' });
     setIsUploading(true);
@@ -232,18 +245,19 @@ export default function Gallery() {
 
       {displayPhotos.length > 0 ? (
         <section className="grid grid-flow-dense grid-cols-2 gap-4 md:auto-rows-[5rem] md:grid-cols-12 md:gap-5" aria-label="摄影作品拼图墙">
-          {displayPhotos.map((photo) => (
-            <article key={photo.id} role="button" tabIndex={0} onClick={() => openPhoto(photo)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPhoto(photo); } }} className={`group relative cursor-zoom-in overflow-hidden rounded-[1.75rem] bg-zinc-100 shadow-[0_18px_55px_rgb(0_0_0/0.16)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_28px_70px_rgb(0_0_0/0.24)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white dark:bg-zinc-900 ${mosaicClasses[photoAspects[photo.id] || 'standard']}`} aria-label="查看摄影作品大图与备注">
+          {displayPhotos.map((photo) => {
+            const caption = [photo.location, formatPhotoDate(photo.takenAt)].filter(Boolean).join(' · ');
+            return <article key={photo.id} role="button" tabIndex={0} onClick={() => openPhoto(photo)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPhoto(photo); } }} className={`group relative cursor-zoom-in overflow-hidden rounded-[1.75rem] bg-zinc-100 shadow-[0_18px_55px_rgb(0_0_0/0.16)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_28px_70px_rgb(0_0_0/0.24)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white dark:bg-zinc-900 ${mosaicClasses[photoAspects[photo.id] || 'standard']}`} aria-label="查看摄影作品大图与备注">
               <img src={photo.url} onLoad={(event) => detectAspect(photo.id, event.currentTarget)} alt="摄影作品" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.045]" />
               <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/25 via-transparent to-black/65 p-5 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
                 <div className="flex justify-end">
                   {!photo.extractedColors && <button onClick={(event) => { event.stopPropagation(); void backfillPhotoColors(photo); }} className="mr-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-md transition-colors hover:bg-blue-500" title="补齐图片配色"><Palette className="w-4 h-4" /></button>}
                   <button onClick={(event) => { event.stopPropagation(); if (window.confirm('确定要删除这张照片吗？')) void deletePhoto(photo.id).catch(() => setNotice({ kind: 'error', message: '删除失败，请重试' })); }} className="flex h-11 w-11 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-md transition-colors hover:bg-red-500" title="删除图片"><Trash2 className="w-4 h-4" /></button>
                 </div>
-                <div className="text-xs font-medium text-white drop-shadow-md">点击查看大图与作品故事 · 上传于 {format(photo.createdAt, 'yyyy-MM-dd')}</div>
+                {caption && <div className="text-xs font-medium text-white drop-shadow-md">{caption}</div>}
               </div>
             </article>
-          ))}
+          })}
         </section>
       ) : (
         <div className="apple-surface flex min-h-96 flex-col items-center justify-center rounded-[2.5rem] p-12 text-center">

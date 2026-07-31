@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { access, mkdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import argon2 from 'argon2';
 import cookie from '@fastify/cookie';
@@ -19,14 +19,16 @@ import { loadNews } from './news.js';
 const idSchema = z.string().uuid();
 const emailSchema = z.string().trim().email('请输入格式正确的邮箱地址。').max(320).transform((value) => value.toLowerCase());
 const passwordSchema = z.string().min(8, '密码至少需要 8 位。').max(128);
+const colorSchema = z.string().regex(/^(?:#[0-9a-f]{6}|rgb\(\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*\))$/i, '图片配色格式不正确。');
 const postSchema = z.object({ title: z.string().trim().min(1).max(240), content: z.string().max(200_000), category: z.enum(['diary', 'learning']), tags: z.array(z.string().trim().min(1).max(40)).max(20), isDraft: z.boolean() });
 const todoSchema = z.object({ title: z.string().trim().min(1).max(240), description: z.string().max(5_000), completed: z.boolean().optional(), steps: z.array(z.object({ id: z.string().uuid(), title: z.string().trim().min(1).max(240), completed: z.boolean() })).max(100).optional() });
-const photoMetadataSchema = z.object({ extractedColors: z.object({ primary: z.string().regex(/^#[0-9a-f]{6}$/i), secondary: z.string().regex(/^#[0-9a-f]{6}$/i) }).nullable().optional(), takenAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), location: z.string().trim().max(240).nullable().optional(), story: z.string().trim().max(5_000).nullable().optional() });
+const photoMetadataSchema = z.object({ extractedColors: z.object({ primary: colorSchema, secondary: colorSchema }).nullable().optional(), takenAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), location: z.string().trim().max(240).nullable().optional(), story: z.string().trim().max(5_000).nullable().optional() });
 
 type Auth = NonNullable<FastifyRequest['auth']>;
 type Row = Record<string, unknown>;
 
 const toMillis = (value: unknown) => new Date(String(value)).getTime();
+const etagMatches = (header: string | undefined, etag: string) => header?.split(',').some((value) => value.trim().replace(/^W\//, '') === etag) ?? false;
 const mapPost = (row: Row) => ({ id: row.id, title: row.title, content: row.content, category: row.category, tags: row.tags, isDraft: row.is_draft, createdAt: toMillis(row.created_at), updatedAt: toMillis(row.updated_at) });
 const mapPhoto = (row: Row, config: AppConfig) => ({ id: row.id, url: `${config.publicApiPrefix}/media/${row.media_id}`, createdAt: toMillis(row.created_at), extractedColors: row.extracted_colors, takenAt: row.taken_on, location: row.location, story: row.story });
 const mapWeight = (row: Row) => ({ id: row.id, weight: Number(row.weight), date: toMillis(row.recorded_at) });
@@ -176,13 +178,13 @@ export const buildApp = (pool: Pool, config: AppConfig) => {
 
   app.post('/api/photos', { preHandler: requireAuth(pool) }, async (request, reply) => {
     const current = auth(request); const media = await writeUpload(request, pool, config, current, 'gallery');
-    let colors: unknown = null;
-    const colorField = fieldValue(media.fields, 'extractedColors');
-    if (typeof colorField === 'string' && colorField) {
-      try { colors = JSON.parse(colorField); } catch { throw new ApiError(400, 'INVALID_COLORS', '图片配色数据格式不正确。'); }
-    }
-    const metadata = parse(photoMetadataSchema.pick({ extractedColors: true }), { extractedColors: colors });
     try {
+      let colors: unknown = null;
+      const colorField = fieldValue(media.fields, 'extractedColors');
+      if (typeof colorField === 'string' && colorField) {
+        try { colors = JSON.parse(colorField); } catch { throw new ApiError(400, 'INVALID_COLORS', '图片配色数据格式不正确。'); }
+      }
+      const metadata = parse(photoMetadataSchema.pick({ extractedColors: true }), { extractedColors: colors });
       const { rows } = await pool.query('insert into photos (blog_id, media_id, extracted_colors) values ($1, $2, $3) returning *', [current.blogId, media.id, metadata.extractedColors ?? null]);
       return reply.code(201).send(mapPhoto({ ...rows[0], media_id: media.id }, config));
     } catch (error) {
@@ -222,8 +224,19 @@ export const buildApp = (pool: Pool, config: AppConfig) => {
     const { rows } = await pool.query('select storage_key, mime_type from media_files where id = $1 and blog_id = $2', [id, current.blogId]);
     if (!rows[0]) throw new ApiError(404, 'MEDIA_NOT_FOUND', '图片不存在或无权访问。');
     const file = storagePath(config, rows[0].storage_key);
-    try { await access(file); } catch { throw new ApiError(404, 'MEDIA_NOT_FOUND', '图片文件不存在。'); }
-    reply.header('Cache-Control', 'private, no-store').type(rows[0].mime_type);
+    let fileStats;
+    try {
+      fileStats = await stat(file);
+    } catch { throw new ApiError(404, 'MEDIA_NOT_FOUND', '图片文件不存在。'); }
+    if (!fileStats.isFile()) throw new ApiError(404, 'MEDIA_NOT_FOUND', '图片文件不存在。');
+
+    const etag = `"${createHash('sha256').update(`${rows[0].storage_key}:${fileStats.size}:${fileStats.mtimeMs}`).digest('base64url')}"`;
+    reply
+      .header('Cache-Control', 'private, no-cache')
+      .header('ETag', etag)
+      .header('Content-Length', String(fileStats.size))
+      .type(rows[0].mime_type);
+    if (etagMatches(request.headers['if-none-match'], etag)) return reply.code(304).send();
     return reply.send(createReadStream(file));
   });
 

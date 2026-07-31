@@ -21,7 +21,6 @@
     "@fastify/rate-limit": "^10.3.0",
     "argon2": "^0.41.1",
     "clsx": "^2.1.1",
-    "colorthief": "^3.3.1",
     "date-fns": "^4.1.0",
     "dotenv": "^16.6.1",
     "fastify": "^5.6.0",
