@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { mkdir, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import argon2 from 'argon2';
 import cookie from '@fastify/cookie';
@@ -14,6 +14,7 @@ import { clearSession, requireAuth, setSession } from './auth.js';
 import { loadConfig, type AppConfig } from './config.js';
 import { createPool, runMigrations, withTransaction } from './db.js';
 import { ApiError } from './errors.js';
+import { readImageDimensions } from './imageDimensions.js';
 import { loadNews } from './news.js';
 
 const idSchema = z.string().uuid();
@@ -28,9 +29,13 @@ type Auth = NonNullable<FastifyRequest['auth']>;
 type Row = Record<string, unknown>;
 
 const toMillis = (value: unknown) => new Date(String(value)).getTime();
+const toDimension = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
 const etagMatches = (header: string | undefined, etag: string) => header?.split(',').some((value) => value.trim().replace(/^W\//, '') === etag) ?? false;
 const mapPost = (row: Row) => ({ id: row.id, title: row.title, content: row.content, category: row.category, tags: row.tags, isDraft: row.is_draft, createdAt: toMillis(row.created_at), updatedAt: toMillis(row.updated_at) });
-const mapPhoto = (row: Row, config: AppConfig) => ({ id: row.id, url: `${config.publicApiPrefix}/media/${row.media_id}`, createdAt: toMillis(row.created_at), extractedColors: row.extracted_colors, takenAt: row.taken_on, location: row.location, story: row.story });
+const mapPhoto = (row: Row, config: AppConfig) => ({ id: row.id, url: `${config.publicApiPrefix}/media/${row.media_id}`, createdAt: toMillis(row.created_at), extractedColors: row.extracted_colors, takenAt: row.taken_on, location: row.location, story: row.story, width: toDimension(row.width), height: toDimension(row.height) });
 const mapWeight = (row: Row) => ({ id: row.id, weight: Number(row.weight), date: toMillis(row.recorded_at) });
 const mapTodo = (row: Row) => ({ id: row.id, title: row.title, description: row.description, completed: row.completed, steps: row.steps, createdAt: toMillis(row.created_at) });
 
@@ -67,6 +72,14 @@ const writeUpload = async (request: FastifyRequest, pool: Pool, config: AppConfi
   if (!extension) throw new ApiError(400, 'UNSUPPORTED_MEDIA', '仅支持 JPG、PNG 或 WebP 图片。');
   const buffer = await file.toBuffer();
   if (buffer.length === 0 || buffer.length > config.uploadLimitBytes) throw new ApiError(413, 'FILE_TOO_LARGE', '图片超过服务器允许的大小限制。');
+  let dimensions: { width: number; height: number } | null = null;
+  if (kind === 'gallery') {
+    try {
+      dimensions = readImageDimensions(buffer);
+    } catch {
+      throw new ApiError(400, 'INVALID_IMAGE_DIMENSIONS', '无法读取图片尺寸，请重新导出为 JPG、PNG 或 WebP 后上传。');
+    }
+  }
   const id = randomUUID();
   const key = `${context.blogId}/${kind}/${id}.${extension}`;
   const destination = storagePath(config, key);
@@ -74,14 +87,14 @@ const writeUpload = async (request: FastifyRequest, pool: Pool, config: AppConfi
   await writeFile(destination, buffer, { flag: 'wx' });
   try {
     await pool.query(
-      'insert into media_files (id, blog_id, storage_key, original_name, mime_type, size_bytes) values ($1, $2, $3, $4, $5, $6)',
-      [id, context.blogId, key, path.basename(file.filename || `upload.${extension}`), file.mimetype, buffer.length],
+      'insert into media_files (id, blog_id, storage_key, original_name, mime_type, size_bytes, width, height) values ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [id, context.blogId, key, path.basename(file.filename || `upload.${extension}`), file.mimetype, buffer.length, dimensions?.width ?? null, dimensions?.height ?? null],
     );
   } catch (error) {
     await unlink(destination).catch(() => undefined);
     throw error;
   }
-  return { id, key, fields: file.fields as Record<string, unknown> };
+  return { id, key, dimensions, fields: file.fields as Record<string, unknown> };
 };
 
 export const buildApp = (pool: Pool, config: AppConfig) => {
@@ -144,7 +157,7 @@ export const buildApp = (pool: Pool, config: AppConfig) => {
     const current = auth(request);
     const [posts, photos, weights, todos] = await Promise.all([
       pool.query('select * from posts where blog_id = $1 order by created_at desc', [current.blogId]),
-      pool.query('select photos.*, media_files.id as media_id from photos join media_files on media_files.id = photos.media_id where photos.blog_id = $1 order by photos.created_at desc', [current.blogId]),
+      pool.query('select photos.*, media_files.id as media_id, media_files.width, media_files.height from photos join media_files on media_files.id = photos.media_id where photos.blog_id = $1 order by photos.created_at desc', [current.blogId]),
       pool.query('select * from weights where blog_id = $1 order by recorded_at asc', [current.blogId]),
       pool.query('select * from todos where blog_id = $1 order by created_at desc', [current.blogId]),
     ]);
@@ -186,7 +199,7 @@ export const buildApp = (pool: Pool, config: AppConfig) => {
       }
       const metadata = parse(photoMetadataSchema.pick({ extractedColors: true }), { extractedColors: colors });
       const { rows } = await pool.query('insert into photos (blog_id, media_id, extracted_colors) values ($1, $2, $3) returning *', [current.blogId, media.id, metadata.extractedColors ?? null]);
-      return reply.code(201).send(mapPhoto({ ...rows[0], media_id: media.id }, config));
+      return reply.code(201).send(mapPhoto({ ...rows[0], media_id: media.id, width: media.dimensions?.width, height: media.dimensions?.height }, config));
     } catch (error) {
       await pool.query('delete from media_files where id = $1', [media.id]).catch(() => undefined);
       await unlink(storagePath(config, media.key)).catch(() => undefined);
@@ -204,9 +217,24 @@ export const buildApp = (pool: Pool, config: AppConfig) => {
     if ('story' in input) add('story', input.story?.trim() || null);
     if (updates.length === 0) throw new ApiError(400, 'NO_CHANGES', '没有可保存的图片信息。');
     values.push(id, current.blogId);
-    const { rows } = await pool.query(`update photos set ${updates.join(', ')} where id = $${values.length - 1} and blog_id = $${values.length} returning *, media_id`, values);
+    const { rows } = await pool.query(`update photos set ${updates.join(', ')} where id = $${values.length - 1} and blog_id = $${values.length} returning *`, values);
     if (!rows[0]) throw new ApiError(404, 'PHOTO_NOT_FOUND', '摄影作品不存在或无权访问。');
-    return mapPhoto(rows[0], config);
+    const media = await pool.query('select width, height from media_files where id = $1 and blog_id = $2', [rows[0].media_id, current.blogId]);
+    return mapPhoto({ ...rows[0], width: media.rows[0]?.width, height: media.rows[0]?.height }, config);
+  });
+
+  app.patch('/api/photos/:id/dimensions', { preHandler: requireAuth(pool) }, async (request) => {
+    const current = auth(request); const id = requireId(request);
+    const { rows } = await pool.query('select photos.*, media_files.storage_key from photos join media_files on media_files.id = photos.media_id where photos.id = $1 and photos.blog_id = $2', [id, current.blogId]);
+    if (!rows[0]) throw new ApiError(404, 'PHOTO_NOT_FOUND', '摄影作品不存在或无权访问。');
+    let dimensions: { width: number; height: number };
+    try {
+      dimensions = readImageDimensions(await readFile(storagePath(config, rows[0].storage_key)));
+    } catch {
+      throw new ApiError(422, 'UNREADABLE_IMAGE_DIMENSIONS', '无法读取这张图片的尺寸。');
+    }
+    await pool.query('update media_files set width = $1, height = $2 where id = $3 and blog_id = $4', [dimensions.width, dimensions.height, rows[0].media_id, current.blogId]);
+    return mapPhoto({ ...rows[0], width: dimensions.width, height: dimensions.height }, config);
   });
 
   app.delete('/api/photos/:id', { preHandler: requireAuth(pool) }, async (request, reply) => {

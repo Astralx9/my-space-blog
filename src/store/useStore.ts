@@ -5,7 +5,7 @@ import { contentApi } from '../lib/api';
 export type Category = 'diary' | 'learning';
 
 export interface Post { id: string; title: string; content: string; category: Category; tags: string[]; isDraft: boolean; createdAt: number; updatedAt: number; }
-export interface Photo { id: string; url: string; createdAt: number; extractedColors?: { primary: string; secondary: string } | null; takenAt?: string | null; location?: string | null; story?: string | null; }
+export interface Photo { id: string; url: string; createdAt: number; extractedColors?: { primary: string; secondary: string } | null; takenAt?: string | null; location?: string | null; story?: string | null; width?: number | null; height?: number | null; }
 type PhotoMetadataInput = Pick<Photo, 'takenAt' | 'location' | 'story'>;
 export interface WeightRecord { id: string; weight: number; date: number; }
 export interface TodoStep { id: string; title: string; completed: boolean; }
@@ -29,6 +29,7 @@ interface AppState {
   addPhoto: (photoData: { compressedImage: string; extractedColors?: { primary: string; secondary: string } | null }) => Promise<Photo>;
   setPhotoColors: (id: string, colors: { primary: string; secondary: string }) => Promise<void>;
   updatePhotoMetadata: (id: string, metadata: PhotoMetadataInput) => Promise<void>;
+  backfillPhotoDimensions: (id: string) => Promise<void>;
   deletePhoto: (id: string) => Promise<void>;
   addWeight: (weight: number) => Promise<void>;
   deleteWeight: (id: string) => Promise<void>;
@@ -83,6 +84,10 @@ export const useStore = create<AppState>()(persist((set) => ({
   },
   updatePhotoMetadata: async (id, metadata) => {
     const photo = await contentApi.updatePhoto(id, metadata) as Photo;
+    set((state) => ({ photos: state.photos.map((item) => item.id === id ? photo : item) }));
+  },
+  backfillPhotoDimensions: async (id) => {
+    const photo = await contentApi.backfillPhotoDimensions(id) as Photo;
     set((state) => ({ photos: state.photos.map((item) => item.id === id ? photo : item) }));
   },
   deletePhoto: async (id) => {

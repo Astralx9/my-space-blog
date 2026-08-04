@@ -46,6 +46,7 @@ export const contentApi = {
     return request<{ id: string; url: string }>('/media/inline', { method: 'POST', body: form });
   },
   updatePhoto: (id: string, input: unknown) => request(`/photos/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  backfillPhotoDimensions: (id: string) => request(`/photos/${id}/dimensions`, { method: 'PATCH' }),
   deletePhoto: (id: string) => request<void>(`/photos/${id}`, { method: 'DELETE' }),
   addWeight: (weight: number) => request('/weights', { method: 'POST', body: JSON.stringify({ weight }) }),
   deleteWeight: (id: string) => request<void>(`/weights/${id}`, { method: 'DELETE' }),

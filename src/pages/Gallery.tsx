@@ -78,6 +78,7 @@ export default function Gallery() {
   const addPhoto = useStore((state) => state.addPhoto);
   const setPhotoColors = useStore((state) => state.setPhotoColors);
   const updatePhotoMetadata = useStore((state) => state.updatePhotoMetadata);
+  const backfillPhotoDimensions = useStore((state) => state.backfillPhotoDimensions);
   const deletePhoto = useStore((state) => state.deletePhoto);
   const [queue, setQueue] = useState<UploadItem[]>([]);
   const [notice, setNotice] = useState<{ kind: 'idle' | 'success' | 'error'; message?: string }>({ kind: 'idle' });
@@ -87,6 +88,7 @@ export default function Gallery() {
   const [metadata, setMetadata] = useState({ takenAt: '', location: '', story: '' });
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [metadataError, setMetadataError] = useState('');
+  const dimensionsRequested = useRef(new Set<string>());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const displayPhotos = photos;
 
@@ -162,10 +164,14 @@ export default function Gallery() {
     image.src = photo.url;
   };
 
-  const detectAspect = (photoId: string, image: HTMLImageElement) => {
+  const detectAspect = (photo: Photo, image: HTMLImageElement) => {
     const ratio = image.naturalWidth / image.naturalHeight;
     const aspect: PhotoAspect = ratio >= 1.45 ? 'landscape' : ratio <= 0.82 ? 'portrait' : 'standard';
-    setPhotoAspects((current) => current[photoId] === aspect ? current : { ...current, [photoId]: aspect });
+    setPhotoAspects((current) => current[photo.id] === aspect ? current : { ...current, [photo.id]: aspect });
+    if ((!photo.width || !photo.height) && !dimensionsRequested.current.has(photo.id)) {
+      dimensionsRequested.current.add(photo.id);
+      void backfillPhotoDimensions(photo.id).catch(() => dimensionsRequested.current.delete(photo.id));
+    }
   };
 
   const openPhoto = (photo: Photo) => {
@@ -248,7 +254,7 @@ export default function Gallery() {
           {displayPhotos.map((photo) => {
             const caption = [photo.location, formatPhotoDate(photo.takenAt)].filter(Boolean).join(' · ');
             return <article key={photo.id} role="button" tabIndex={0} onClick={() => openPhoto(photo)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPhoto(photo); } }} className={`group relative cursor-zoom-in overflow-hidden rounded-[1.75rem] bg-zinc-100 shadow-[0_18px_55px_rgb(0_0_0/0.16)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_28px_70px_rgb(0_0_0/0.24)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white dark:bg-zinc-900 ${mosaicClasses[photoAspects[photo.id] || 'standard']}`} aria-label="查看摄影作品大图与备注">
-              <img src={photo.url} onLoad={(event) => detectAspect(photo.id, event.currentTarget)} alt="摄影作品" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.045]" />
+              <img src={photo.url} onLoad={(event) => detectAspect(photo, event.currentTarget)} alt="摄影作品" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.045]" />
               <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/25 via-transparent to-black/65 p-5 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
                 <div className="flex justify-end">
                   {!photo.extractedColors && <button onClick={(event) => { event.stopPropagation(); void backfillPhotoColors(photo); }} className="mr-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-md transition-colors hover:bg-blue-500" title="补齐图片配色"><Palette className="w-4 h-4" /></button>}

@@ -2,15 +2,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useStore } from '../../store/useStore';
 import React, { useEffect, useRef, useState } from 'react';
-
-const shuffled = <T,>(items: T[]) => {
-  const result = [...items];
-  for (let index = result.length - 1; index > 0; index -= 1) {
-    const nextIndex = Math.floor(Math.random() * (index + 1));
-    [result[index], result[nextIndex]] = [result[nextIndex], result[index]];
-  }
-  return result;
-};
+import { advanceBackgroundSequence, getBackgroundCandidateIds } from '../../lib/backgroundSequence';
 
 export default function Layout() {
   const componentOpacity = useStore((state) => state.componentOpacity);
@@ -18,7 +10,9 @@ export default function Layout() {
   const extractedColors = useStore((state) => state.extractedColors);
   const photos = useStore((state) => state.photos);
   const setExtractedColors = useStore((state) => state.setExtractedColors);
+  const backfillPhotoDimensions = useStore((state) => state.backfillPhotoDimensions);
   const backgroundPhotoId = useRef<string | null>(null);
+  const dimensionsRequested = useRef(new Set<string>());
   const [backgroundPhoto, setBackgroundPhoto] = useState<(typeof photos)[number] | null>(null);
   const [isBackgroundLoaded, setIsBackgroundLoaded] = useState(false);
 
@@ -34,21 +28,32 @@ export default function Layout() {
     }
 
     const findLandscapePhoto = async () => {
-      for (const photo of shuffled(photos)) {
+      const photoIds = photos.map((photo) => photo.id);
+      const photosById = new Map(photos.map((photo) => [photo.id, photo]));
+      for (const photoId of getBackgroundCandidateIds(photoIds)) {
+        const photo = photosById.get(photoId);
+        if (!photo || (photo.width && photo.height && photo.width <= photo.height)) continue;
         const image = new Image();
         image.decoding = 'async';
         image.fetchPriority = 'high';
-        const isLandscape = await new Promise<boolean>((resolve) => {
-          image.onload = () => resolve(image.naturalWidth > image.naturalHeight);
+        const loaded = await new Promise<boolean>((resolve) => {
+          image.onload = () => resolve(true);
           image.onerror = () => resolve(false);
           image.src = photo.url;
         });
 
         if (cancelled) return;
-        if (isLandscape) {
+        if (!loaded) continue;
+        const hasStoredDimensions = Boolean(photo.width && photo.height);
+        if (!hasStoredDimensions && !dimensionsRequested.current.has(photo.id)) {
+          dimensionsRequested.current.add(photo.id);
+          void backfillPhotoDimensions(photo.id).catch(() => dimensionsRequested.current.delete(photo.id));
+        }
+        if (image.naturalWidth > image.naturalHeight) {
           backgroundPhotoId.current = photo.id;
           setIsBackgroundLoaded(false);
           setBackgroundPhoto(photo);
+          advanceBackgroundSequence(photoIds, photo.id);
           return;
         }
       }
@@ -63,7 +68,7 @@ export default function Layout() {
     void findLandscapePhoto();
 
     return () => { cancelled = true; };
-  }, [photos]);
+  }, [backfillPhotoDimensions, photos]);
 
   useEffect(() => {
     setExtractedColors(backgroundPhoto?.extractedColors ?? null);
